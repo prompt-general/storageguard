@@ -1,0 +1,12 @@
+{
+  "name": "storageguard",
+  "version": "1.0.0",
+  "description": "StorageGuard is a tool for scanning and securing storage accounts across various cloud providers.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
