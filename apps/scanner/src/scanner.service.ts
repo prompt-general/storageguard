@@ -14,6 +14,8 @@ import { AwsProvider } from './providers/aws.provider';
 import { AzureProvider } from './providers/azure.provider';
 import { GcpProvider } from './providers/gcp.provider';
 import { RiskScoringEngine } from '@storageguard/shared';
+import { FindingsService } from '../../../api/src/control/findings/findings.service';
+import { ControlService } from '../../../api/src/control/control.service';
 
 @Injectable()
 export class ScannerService {
@@ -26,8 +28,8 @@ export class ScannerService {
         private cloudAccountRepository: Repository<CloudAccount>,
         @InjectRepository(StorageResource)
         private storageResourceRepository: Repository<StorageResource>,
-        @InjectRepository(Finding)
-        private findingRepository: Repository<Finding>,
+        private findingsService: FindingsService,
+        private controlService: ControlService,
     ) {
         this.riskEngine = new RiskScoringEngine();
         this.providers = new Map();
@@ -150,35 +152,36 @@ export class ScannerService {
         resource: StorageResource,
         checkResult: any
     ) {
-        // This is where we'd check against the control definitions
-        // For now, create findings for failed checks
         if (checkResult.failed) {
+            const baseSeverity = await this.controlService.getBaseSeverity(controlId);
+            const remediationAvailable = await this.controlService.isRemediationAvailable(controlId);
+            const remediationGuidance = await this.controlService.getRemediationGuidance(controlId);
+
             const exposure = this.riskEngine.detectExposure(
                 resource.configuration.policy,
                 resource.configuration
             );
 
             const riskScore = this.riskEngine.calculateRiskScore({
-                baseSeverity: 'high', // Would come from control definition
+                baseSeverity,
                 ...exposure
             });
 
-            const finding = this.findingRepository.create({
+            await this.findingsService.create({
                 tenant_id: resource.tenant_id,
                 resource_id: resource.id,
                 control_id: controlId,
-                severity: 'high',
+                severity: baseSeverity,
                 risk_score: riskScore,
-                status: 'open',
-                title: `Security issue detected: ${controlId}`,
-                description: `Resource ${resource.resource_id} failed ${controlId} check`,
+                title: `${controlId}: ${checkResult.details || 'Security check failed'}`,
+                description: `Resource ${resource.resource_id} is non-compliant with control ${controlId}.`,
                 evidence: checkResult,
-                remediation_available: true,
-                detected_at: new Date(),
-                last_seen_at: new Date(),
+                remediation_available: remediationAvailable,
+                remediation_guidance: remediationGuidance,
             });
-
-            await this.findingRepository.save(finding);
+        } else {
+            // If the check passed but there was an open finding for this resource/control, resolve it
+            // This would require finding and resolving; we'll implement later.
         }
     }
 }
