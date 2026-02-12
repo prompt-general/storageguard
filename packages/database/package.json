@@ -1,20 +1,18 @@
 {
-  "name": "database",
-  "version": "1.0.0",
-  "main": "index.js",
+  "name": "@storageguard/database",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "dev": "tsc -w",
+    "db:migrate": "npm run build && typeorm migration:run -d dist/datasource.js",
+    "db:generate": "npm run build && typeorm migration:generate -d dist/datasource.js",
+    "seed": "ts-node src/seed/run-seed.ts"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
-    "pg": "^8.18.0",
-    "reflect-metadata": "^0.2.2",
-    "typeorm": "^0.3.28"
-  },
-  "devDependencies": {
-    "@types/pg": "^8.16.0"
+    "typeorm": "^0.3.0",
+    "pg": "^8.11.0",
+    "reflect-metadata": "^0.1.13"
   }
 }
