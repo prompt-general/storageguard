@@ -1,24 +1,24 @@
 {
   "name": "storageguard",
-  "version": "1.0.0",
-  "description": "StorageGuard is a tool for scanning and securing storage accounts across various cloud providers.",
-  "main": "index.js",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm run build --workspaces",
+    "dev:api": "npm run dev --workspace=apps/api",
+    "dev:scanner": "npm run dev --workspace=apps/scanner",
+    "test": "npm run test --workspaces",
+    "lint": "eslint \"{src,apps,packages}/**/*.ts\" --fix",
+    "format": "prettier --write \"{src,apps,packages}/**/*.ts\"",
+    "db:migrate": "npm run db:migrate --workspace=packages/database",
+    "db:generate": "npm run db:generate --workspace=packages/database"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "devDependencies": {
-    "@nestjs/cli": "^11.0.16",
-    "@nestjs/testing": "^11.1.13",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^25.2.3",
-    "eslint": "^9.39.2",
-    "jest": "^30.2.0",
-    "nodemon": "^3.1.11",
-    "prettier": "^3.8.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "@nestjs/cli": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
   }
 }
