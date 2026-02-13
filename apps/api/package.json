@@ -1,4 +1,3 @@
-// apps/api/package.json
 {
     "name": "@storageguard/api",
     "version": "0.1.0",
