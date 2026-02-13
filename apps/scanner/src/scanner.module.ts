@@ -1,15 +1,9 @@
-// apps/scanner/src/scanner.module.ts
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
-import {
-    DatabaseModule,
-    CloudAccount,
-    StorageResource,
-    Finding,
-} from '@storageguard/database';
+import { DatabaseModule, CloudAccount, StorageResource, Finding } from '@storageguard/database';
 import { ScannerService } from './scanner.service';
 import { ScannerProcessor } from './scanner.processor';
 import { AwsProvider } from './providers/aws.provider';
@@ -41,7 +35,7 @@ import { ControlModule } from '../../../api/src/control/control.module';
         AwsProvider,
         ScannerProcessor,
         SqsConsumerService,
-        EventProcessorService
+        EventProcessorService,
     ],
     exports: [ScannerService],
 })
