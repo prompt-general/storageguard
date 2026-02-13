@@ -4,7 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Finding, StorageResource } from '@storageguard/database';
 import { FindingsService } from './findings.service';
 import { FindingsController } from './findings.controller';
-import { ControlModule } from '../control/control.module';
+import { ControlModule } from '../control.module';
 
 @Module({
     imports: [

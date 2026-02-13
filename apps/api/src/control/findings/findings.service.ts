@@ -3,7 +3,7 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Finding, StorageResource } from '@storageguard/database';
-import { ControlService } from '../control/control.service';
+import { ControlService } from '../control.service';
 import { CreateFindingDto } from './dto/create-finding.dto';
 import { UpdateFindingDto } from './dto/update-finding.dto';
 import { RiskScoringEngine } from '@storageguard/shared';
