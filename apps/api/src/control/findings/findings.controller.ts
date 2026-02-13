@@ -7,9 +7,11 @@ import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger'
 import { FindingsService } from './findings.service';
 import { CreateFindingDto } from './dto/create-finding.dto';
 import { UpdateFindingDto } from './dto/update-finding.dto';
+import { JwtAuthGuard } from '../../auth/jwt-auth.guard';
 
 @ApiTags('findings')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('findings')
 export class FindingsController {
     constructor(private readonly findingsService: FindingsService) { }

@@ -1,9 +1,11 @@
-// apps/api/src/control/control.controller.ts
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, UseGuards } from '@nestjs/common';
 import { ControlService } from './control.service';
-import { ApiTags, ApiOperation } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('controls')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('controls')
 export class ControlController {
     constructor(private readonly controlService: ControlService) { }
