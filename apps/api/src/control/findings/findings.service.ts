@@ -151,6 +151,12 @@ export class FindingsService {
         return this.findingRepository.save(finding);
     }
 
+    async findOneByResourceAndControl(resourceId: string, controlId: string): Promise<Finding | null> {
+        return this.findingRepository.findOne({
+            where: { resource_id: resourceId, control_id: controlId },
+        });
+    }
+
     async getStatistics(tenantId: string) {
         const result = await this.findingRepository
             .createQueryBuilder('finding')
