@@ -1,7 +1,5 @@
-// apps/api/src/app.module.ts
 import { Module } from '@nestjs/common';
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { ConfigModule } from '@nestjs/config';
 import { DatabaseModule } from '@storageguard/database';
 import { ControlModule } from './control/control.module';
 import { FindingsModule } from './control/findings/findings.module';
@@ -11,9 +9,9 @@ import { AuthModule } from './auth/auth.module';
     imports: [
         ConfigModule.forRoot({ isGlobal: true }),
         DatabaseModule,
+        AuthModule,
         ControlModule,
         FindingsModule,
-        AuthModule,
     ],
 })
 export class AppModule { }
