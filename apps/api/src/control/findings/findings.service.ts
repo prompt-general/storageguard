@@ -1,5 +1,5 @@
 // apps/api/src/findings/findings.service.ts
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Finding, StorageResource } from '@storageguard/database';
@@ -108,11 +108,17 @@ export class FindingsService {
         return { items, total };
     }
 
-    async findOne(id: string): Promise<Finding> {
-        const finding = await this.findingRepository.findOne({
-            where: { id },
-            relations: ['storage_resource'],
-        });
+    async findOne(id: string, tenantId?: string): Promise<Finding> {
+        const query = this.findingRepository
+            .createQueryBuilder('finding')
+            .leftJoinAndSelect('finding.storage_resource', 'resource')
+            .where('finding.id = :id', { id });
+
+        if (tenantId) {
+            query.andWhere('finding.tenant_id = :tenantId', { tenantId });
+        }
+
+        const finding = await query.getOne();
 
         if (!finding) {
             throw new NotFoundException(`Finding with ID ${id} not found`);
@@ -121,20 +127,14 @@ export class FindingsService {
         return finding;
     }
 
-    async update(id: string, updateFindingDto: UpdateFindingDto): Promise<Finding> {
-        const finding = await this.findOne(id);
-
-        // If status is being updated to resolved, set resolved_at
-        if (updateFindingDto.status === 'resolved' || updateFindingDto.status === 'fixed') {
-            finding.resolved_at = new Date();
-        }
-
+    async update(id: string, updateFindingDto: UpdateFindingDto, tenantId?: string): Promise<Finding> {
+        const finding = await this.findOne(id, tenantId);
         Object.assign(finding, updateFindingDto);
         return this.findingRepository.save(finding);
     }
 
-    async suppress(id: string, reason?: string): Promise<Finding> {
-        const finding = await this.findOne(id);
+    async suppress(id: string, reason?: string, tenantId?: string): Promise<Finding> {
+        const finding = await this.findOne(id, tenantId);
         finding.status = 'suppressed';
         finding.evidence = {
             ...finding.evidence,
@@ -144,8 +144,8 @@ export class FindingsService {
         return this.findingRepository.save(finding);
     }
 
-    async resolve(id: string): Promise<Finding> {
-        const finding = await this.findOne(id);
+    async resolve(id: string, tenantId?: string): Promise<Finding> {
+        const finding = await this.findOne(id, tenantId);
         finding.status = 'resolved';
         finding.resolved_at = new Date();
         return this.findingRepository.save(finding);
