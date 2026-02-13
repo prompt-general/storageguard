@@ -5,3 +5,4 @@ export * from './storage-resource.entity';
 export * from './finding.entity';
 export * from './control.entity';
 export * from './remediation-action.entity';
+export * from './user.entity';
