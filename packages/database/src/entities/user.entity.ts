@@ -36,7 +36,7 @@ export class User extends BaseEntity {
     @Column({ type: 'timestamptz', nullable: true })
     last_login_at: Date;
 
-    @ManyToOne(() => Tenant)
+    @ManyToOne(() => Tenant, (tenant) => tenant.users)
     @JoinColumn({ name: 'tenant_id' })
     tenant: Tenant;
 }

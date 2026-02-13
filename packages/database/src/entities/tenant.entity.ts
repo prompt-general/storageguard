@@ -2,6 +2,7 @@
 import { Entity, Column, OneToMany } from 'typeorm';
 import { BaseEntity } from './base.entity';
 import { CloudAccount } from './cloud-account.entity';
+import { User } from './user.entity';
 
 @Entity('tenant')
 export class Tenant extends BaseEntity {
@@ -16,4 +17,7 @@ export class Tenant extends BaseEntity {
 
     @OneToMany(() => CloudAccount, (account) => account.tenant)
     cloud_accounts: CloudAccount[];
+
+    @OneToMany(() => User, (user) => user.tenant)
+    users: User[];
 }
