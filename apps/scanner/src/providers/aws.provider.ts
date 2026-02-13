@@ -272,4 +272,41 @@ export class AwsProvider implements CloudProviderInterface {
     async enableVersioning(resourceId: string, credentials: any): Promise<void> {
         // Implementation for Phase 2
     }
+
+    async refreshResource(credentials: any, bucketName: string, region: string): Promise<StorageResource | null> {
+        const client = await this.getClient(credentials, region);
+        try {
+            const [policy, encryption, logging, versioning, publicAccess] = await Promise.allSettled([
+                this.getBucketPolicy(client, bucketName),
+                this.getBucketEncryption(client, bucketName),
+                this.getBucketLogging(client, bucketName),
+                this.getBucketVersioning(client, bucketName),
+                this.getPublicAccessBlock(client, bucketName),
+            ]);
+
+            const resource: StorageResource = {
+                id: '', // placeholder
+                tenant_id: '',
+                account_id: '',
+                provider: 'aws',
+                resource_type: 'bucket',
+                resource_id: bucketName,
+                region,
+                configuration: {
+                    public_access: this.isPublicAccessBlocked(publicAccess) ? false : true,
+                    encryption_enabled: encryption.status === 'fulfilled' && encryption.value,
+                    versioning_enabled: versioning.status === 'fulfilled' && versioning.value,
+                    logging_enabled: logging.status === 'fulfilled' && logging.value,
+                    policy: policy.status === 'fulfilled' ? policy.value : null,
+                    tags: {},
+                },
+                discovered_at: new Date(),
+                last_modified_at: new Date(),
+            };
+            return resource;
+        } catch (error) {
+            this.logger.error(`Error refreshing bucket ${bucketName}:`, error);
+            return null;
+        }
+    }
 }

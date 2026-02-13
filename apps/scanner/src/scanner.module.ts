@@ -1,6 +1,7 @@
 // apps/scanner/src/scanner.module.ts
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { BullModule } from '@nestjs/bull';
 import {
@@ -12,11 +13,14 @@ import {
 import { ScannerService } from './scanner.service';
 import { ScannerProcessor } from './scanner.processor';
 import { AwsProvider } from './providers/aws.provider';
+import { SqsConsumerService } from './events/sqs-consumer.service';
+import { EventProcessorService } from './events/event-processor.service';
 import { FindingsModule } from '../../../api/src/control/findings/findings.module';
 import { ControlModule } from '../../../api/src/control/control.module';
 
 @Module({
     imports: [
+        ConfigModule.forRoot(),
         ScheduleModule.forRoot(),
         BullModule.forRoot({
             redis: {
@@ -28,11 +32,17 @@ import { ControlModule } from '../../../api/src/control/control.module';
             name: 'scanner',
         }),
         DatabaseModule,
-        TypeOrmModule.forFeature([CloudAccount]),
+        TypeOrmModule.forFeature([CloudAccount, StorageResource, Finding]),
         FindingsModule,
         ControlModule,
     ],
-    providers: [ScannerService, AwsProvider, ScannerProcessor],
+    providers: [
+        ScannerService,
+        AwsProvider,
+        ScannerProcessor,
+        SqsConsumerService,
+        EventProcessorService
+    ],
     exports: [ScannerService],
 })
 export class ScannerModule { }
