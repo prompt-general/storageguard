@@ -9,6 +9,8 @@ import { ScannerProcessor } from './scanner.processor';
 import { AwsProvider } from './providers/aws.provider';
 import { SqsConsumerService } from './events/sqs-consumer.service';
 import { EventProcessorService } from './events/event-processor.service';
+import { AzureProvider } from './providers/azure.provider';
+
 import { FindingsModule } from '../../../api/src/control/findings/findings.module';
 import { ControlModule } from '../../../api/src/control/control.module';
 
@@ -36,7 +38,9 @@ import { ControlModule } from '../../../api/src/control/control.module';
         ScannerProcessor,
         SqsConsumerService,
         EventProcessorService,
+        AzureProvider,
     ],
     exports: [ScannerService],
+
 })
 export class ScannerModule { }
