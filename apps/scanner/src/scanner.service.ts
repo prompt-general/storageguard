@@ -30,14 +30,11 @@ export class ScannerService {
         private storageResourceRepository: Repository<StorageResource>,
         private findingsService: FindingsService,
         private controlService: ControlService,
-        private awsProvider: AwsProvider,
-        private azureProvider: AzureProvider,
-
     ) {
         this.riskEngine = new RiskScoringEngine();
         this.providers = new Map();
-        this.providers.set('aws', this.awsProvider);
-        this.providers.set('azure', this.azureProvider);
+        this.providers.set('aws', new AwsProvider());
+        this.providers.set('azure', new AzureProvider());
         // Initialize GCP provider when ready
         // this.providers.set('gcp', new GcpProvider());
     }
