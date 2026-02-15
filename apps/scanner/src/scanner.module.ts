@@ -10,6 +10,8 @@ import { AwsProvider } from './providers/aws.provider';
 import { SqsConsumerService } from './events/sqs-consumer.service';
 import { EventProcessorService } from './events/event-processor.service';
 import { AzureProvider } from './providers/azure.provider';
+import { GcpProvider } from './providers/gcp.provider';
+
 
 import { FindingsModule } from '../../../api/src/control/findings/findings.module';
 import { ControlModule } from '../../../api/src/control/control.module';
@@ -39,6 +41,8 @@ import { ControlModule } from '../../../api/src/control/control.module';
         SqsConsumerService,
         EventProcessorService,
         AzureProvider,
+        GcpProvider,
+
     ],
     exports: [ScannerService],
 

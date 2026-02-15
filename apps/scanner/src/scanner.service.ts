@@ -12,7 +12,8 @@ import {
 import { CloudProviderInterface } from '@storageguard/shared';
 import { AwsProvider } from './providers/aws.provider';
 import { AzureProvider } from './providers/azure.provider';
-// import { GcpProvider } from './providers/gcp.provider';
+import { GcpProvider } from './providers/gcp.provider';
+
 import { RiskScoringEngine } from '@storageguard/shared';
 import { FindingsService } from '../../../api/src/control/findings/findings.service';
 import { ControlService } from '../../../api/src/control/control.service';
@@ -35,8 +36,8 @@ export class ScannerService {
         this.providers = new Map();
         this.providers.set('aws', new AwsProvider());
         this.providers.set('azure', new AzureProvider());
-        // Initialize GCP provider when ready
-        // this.providers.set('gcp', new GcpProvider());
+        this.providers.set('gcp', new GcpProvider());
+
     }
 
 
