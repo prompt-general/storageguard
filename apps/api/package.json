@@ -22,6 +22,7 @@
         "@storageguard/database": "*",
         "@storageguard/shared": "*",
         "@storageguard/types": "*",
+        "@storageguard/scanner": "*",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.0",
         "reflect-metadata": "^0.1.13",
