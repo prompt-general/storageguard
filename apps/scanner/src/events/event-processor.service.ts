@@ -4,6 +4,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CloudAccount, StorageResource, Finding } from '@storageguard/database';
 import { AwsProvider } from '../providers/aws.provider';
+import { AzureProvider } from '../providers/azure.provider';
+
 import { FindingsService } from '../../../api/src/findings/findings.service'; // Ideally move to shared
 import { ControlService } from '../../../api/src/control/control.service';
 import { RiskScoringEngine } from '@storageguard/shared';
@@ -20,9 +22,11 @@ export class EventProcessorService {
         @InjectRepository(StorageResource)
         private storageResourceRepository: Repository<StorageResource>,
         private awsProvider: AwsProvider,
+        private azureProvider: AzureProvider,
         private findingsService: FindingsService,
         private controlService: ControlService,
     ) { }
+
 
     async processEvent(rawEvent: any) {
         try {
@@ -30,7 +34,8 @@ export class EventProcessorService {
             if (rawEvent.source === 'aws.s3') {
                 await this.processAwsEvent(rawEvent);
             } else if (rawEvent.source.includes('azure')) {
-                // TODO: Azure event processing
+                await this.processAzureEvent(rawEvent);
+
             } else if (rawEvent.source.includes('google')) {
                 // TODO: GCP event processing
             } else {
@@ -230,12 +235,156 @@ export class EventProcessorService {
         return mapping[checkName] || 'SG-000';
     }
 
+    async processAzureEvent(event: any) {
+        try {
+            const subject = event.subject; // e.g., "/blobServices/default/containers/test/blobs/test.txt"
+
+            // Extract container name from subject
+            const containerMatch = subject?.match(/\/containers\/([^\/]+)/);
+            if (!containerMatch) {
+                this.logger.debug('Event does not involve a container, ignoring');
+                return;
+            }
+            const containerName = containerMatch[1];
+
+            // Need storage account name from subject or event data
+            const storageAccountMatch = subject?.match(/\/storageAccounts\/([^\/]+)/);
+            if (!storageAccountMatch) {
+                this.logger.debug('Could not extract storage account name');
+                return;
+            }
+            const storageAccountName = storageAccountMatch[1];
+
+            // Get subscription ID from event data or subject
+            const subscriptionId = event.data?.subscriptionId || subject?.match(/\/subscriptions\/([^\/]+)/)?.[1];
+            if (!subscriptionId) {
+                this.logger.debug('No subscription ID in event');
+                return;
+            }
+
+            // Find cloud account
+            const cloudAccount = await this.cloudAccountRepository.findOne({
+                where: {
+                    provider: 'azure',
+                    external_id: subscriptionId,
+                    is_active: true,
+                },
+            });
+
+            if (!cloudAccount) {
+                this.logger.warn(`No active cloud account for Azure subscription ${subscriptionId}`);
+                return;
+            }
+
+            // Find or fetch storage resource
+            const resourceId = `${storageAccountName}/${containerName}`;
+            let storageResource = await this.storageResourceRepository.findOne({
+                where: {
+                    tenant_id: cloudAccount.tenant_id,
+                    provider: 'azure',
+                    resource_id: resourceId,
+                },
+            });
+
+            if (!storageResource) {
+                // Trigger scan for this container
+                this.logger.log(`Container ${resourceId} not in DB, scanning now`);
+                const resources = await this.azureProvider.listResources(cloudAccount.credentials);
+                const matched = resources.find(r => r.resource_id === resourceId);
+                if (matched) {
+                    storageResource = await this.saveResource(cloudAccount, matched);
+                } else {
+                    this.logger.warn(`Container ${resourceId} not found in provider scan`);
+                    return;
+                }
+            }
+
+            // Determine changed properties based on event type
+            const changedProperties = this.mapAzureEventToProperties(event.eventType);
+            if (changedProperties.length === 0) {
+                this.logger.debug(`Event type ${event.eventType} does not trigger checks`);
+                return;
+            }
+
+            // Run security checks
+            await this.runAzureSecurityChecks(cloudAccount, storageResource, changedProperties);
+        } catch (error) {
+            this.logger.error('Error processing Azure event', error);
+        }
+    }
+
+    private mapAzureEventToProperties(eventType: string): string[] {
+        const mapping = {
+            'Microsoft.Storage.BlobCreated': ['public_access', 'policy'],
+            'Microsoft.Storage.BlobDeleted': [],
+            'Microsoft.Storage.BlobRenamed': [],
+            'Microsoft.Storage.BlobTierChanged': [],
+            'Microsoft.Storage.BlobInventoryPolicyCompleted': [],
+            'Microsoft.Storage.StorageAccountCreated': ['public_access', 'encryption', 'logging', 'versioning'],
+            'Microsoft.Storage.StorageAccountUpdated': ['public_access', 'encryption', 'logging', 'versioning'],
+            'Microsoft.Storage.StorageAccountDeleted': [],
+        };
+        return mapping[eventType] || [];
+    }
+
+    private async runAzureSecurityChecks(
+        cloudAccount: CloudAccount,
+        resource: StorageResource,
+        changedProperties: string[],
+    ) {
+        const refreshedResource = await this.azureProvider.refreshResource(
+            cloudAccount.credentials,
+            resource.resource_id,
+        );
+
+        if (!refreshedResource) {
+            this.logger.error(`Failed to refresh Azure resource ${resource.resource_id}`);
+            return;
+        }
+
+        // Update DB
+        await this.storageResourceRepository.update(resource.id, {
+            configuration: refreshedResource.configuration,
+            last_modified_at: new Date(),
+        });
+
+        // Determine checks to run
+        const checksToRun = [];
+        if (changedProperties.includes('public_access')) {
+            checksToRun.push('checkPublicAccess');
+        }
+        if (changedProperties.includes('encryption')) {
+            checksToRun.push('checkEncryption');
+        }
+        if (changedProperties.includes('logging')) {
+            checksToRun.push('checkLogging');
+        }
+        if (changedProperties.includes('versioning')) {
+            checksToRun.push('checkVersioning');
+        }
+        if (changedProperties.includes('policy')) {
+            checksToRun.push('checkPolicy');
+        }
+
+        for (const checkName of checksToRun) {
+            const checkMethod = this.azureProvider[checkName];
+            if (!checkMethod) continue;
+
+            const checkResult = await checkMethod.call(this.azureProvider, refreshedResource);
+            if (checkResult.failed) {
+                await this.createOrUpdateFinding(resource, checkName, checkResult);
+            } else {
+                await this.resolveFinding(resource, checkName);
+            }
+        }
+    }
+
     private async saveResource(cloudAccount: CloudAccount, resourceData: any): Promise<StorageResource> {
         const resource = this.storageResourceRepository.create({
             tenant_id: cloudAccount.tenant_id,
             account_id: cloudAccount.id,
-            provider: 'aws',
-            resource_type: 'bucket',
+            provider: cloudAccount.provider,
+            resource_type: resourceData.resource_type,
             resource_id: resourceData.resource_id,
             region: resourceData.region,
             configuration: resourceData.configuration,
