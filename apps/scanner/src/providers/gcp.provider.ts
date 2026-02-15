@@ -206,7 +206,7 @@ export class GcpProvider implements CloudProviderInterface {
             const versioningEnabled = metadata.versioning?.enabled === true;
             const loggingEnabled = !!(metadata.logging?.logBucket);
 
-            return {
+            const resource: StorageResource = {
                 id: '',
                 tenant_id: '',
                 account_id: '',
@@ -228,9 +228,11 @@ export class GcpProvider implements CloudProviderInterface {
                 discovered_at: new Date(),
                 last_modified_at: metadata.updated ? new Date(metadata.updated) : undefined,
             };
+            return resource;
         } catch (error) {
-            this.logger.error(`Error refreshing GCP bucket ${bucketName}:`, error);
+            this.logger.error(`Error refreshing bucket ${bucketName}:`, error);
             return null;
         }
     }
 }
+
