@@ -212,4 +212,66 @@ export class AzureProvider implements CloudProviderInterface {
     async enableVersioning(resourceId: string, credentials: any): Promise<void> {
         // TODO
     }
+
+    async refreshResource(credentials: any, resourceId: string): Promise<StorageResource | null> {
+        try {
+            const [accountName, containerName] = resourceId.split('/');
+            const cred = this.getCredential(credentials);
+            const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+
+            // Find the account to get its resource group and properties
+            let account;
+            for await (const acc of storageClient.storageAccounts.list()) {
+                if (acc.name === accountName) {
+                    account = acc;
+                    break;
+                }
+            }
+
+            if (!account) return null;
+
+            const resourceGroup = this.extractResourceGroup(account.id);
+            const properties = await storageClient.storageAccounts.getProperties(resourceGroup, accountName);
+
+            let blobProperties: BlobServiceProperties;
+            try {
+                blobProperties = await storageClient.blobServices.getServiceProperties(resourceGroup, accountName);
+            } catch (e) {
+                blobProperties = {};
+            }
+
+            const blobServiceClient = BlobServiceClient.fromConnectionString(
+                `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+            );
+            const containerClient = blobServiceClient.getContainerClient(containerName);
+            const containerProperties = await containerClient.getProperties();
+            const publicAccess = containerProperties.blobPublicAccess || 'none';
+
+            return {
+                id: '',
+                tenant_id: '',
+                account_id: '',
+                provider: 'azure',
+                resource_type: 'container',
+                resource_id: resourceId,
+                region: properties.primaryLocation || 'unknown',
+                configuration: {
+                    public_access: publicAccess !== 'none',
+                    encryption_enabled: properties.encryption?.services?.blob?.enabled || false,
+                    versioning_enabled: blobProperties?.containerDeleteRetentionPolicy?.enabled || false,
+                    logging_enabled: !!blobProperties?.logging?.delete || false,
+                    policy: {
+                        containersPublicAccess: publicAccess,
+                        networkAcls: properties.networkRuleSet,
+                    },
+                    tags: account.tags || {},
+                },
+                discovered_at: new Date(),
+                last_modified_at: containerProperties.lastModified,
+            };
+        } catch (error) {
+            this.logger.error(`Error refreshing Azure resource ${resourceId}:`, error);
+            return null;
+        }
+    }
 }
