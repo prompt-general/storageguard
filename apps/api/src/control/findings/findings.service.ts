@@ -7,6 +7,8 @@ import { ControlService } from '../control.service';
 import { CreateFindingDto } from './dto/create-finding.dto';
 import { UpdateFindingDto } from './dto/update-finding.dto';
 import { RiskScoringEngine } from '@storageguard/shared';
+import { NotificationService } from '../../notification/notification.service';
+
 
 @Injectable()
 export class FindingsService {
@@ -19,7 +21,9 @@ export class FindingsService {
         @InjectRepository(StorageResource)
         private storageResourceRepository: Repository<StorageResource>,
         private controlService: ControlService,
+        private notificationService: NotificationService,
     ) {
+
         this.riskEngine = new RiskScoringEngine();
     }
 
@@ -51,8 +55,11 @@ export class FindingsService {
                 existing.resolved_at = null;
             }
 
-            return this.findingRepository.save(existing);
+            const saved = await this.findingRepository.save(existing);
+            this.triggerNotificationIfCritical(saved);
+            return saved;
         }
+
 
         // Create new finding
         const finding = this.findingRepository.create({
@@ -62,8 +69,11 @@ export class FindingsService {
             last_seen_at: now,
         });
 
-        return this.findingRepository.save(finding);
+        const saved = await this.findingRepository.save(finding);
+        this.triggerNotificationIfCritical(saved);
+        return saved;
     }
+
 
     async findAllForTenant(
         tenantId: string,
@@ -130,8 +140,19 @@ export class FindingsService {
     async update(id: string, updateFindingDto: UpdateFindingDto, tenantId?: string): Promise<Finding> {
         const finding = await this.findOne(id, tenantId);
         Object.assign(finding, updateFindingDto);
-        return this.findingRepository.save(finding);
+        const saved = await this.findingRepository.save(finding);
+        this.triggerNotificationIfCritical(saved);
+        return saved;
     }
+
+    private triggerNotificationIfCritical(finding: Finding) {
+        if (finding.severity === 'critical' || finding.severity === 'high') {
+            this.notificationService.sendFindingNotification(finding).catch(e =>
+                this.logger.error(`Failed to send notification for finding ${finding.id}`, e)
+            );
+        }
+    }
+
 
     async suppress(id: string, reason?: string, tenantId?: string): Promise<Finding> {
         const finding = await this.findOne(id, tenantId);
