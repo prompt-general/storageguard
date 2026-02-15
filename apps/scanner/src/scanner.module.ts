@@ -44,7 +44,7 @@ import { ControlModule } from '../../../api/src/control/control.module';
         GcpProvider,
 
     ],
-    exports: [ScannerService],
+    exports: [ScannerService, EventProcessorService],
 
 })
 export class ScannerModule { }
