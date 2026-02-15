@@ -5,6 +5,8 @@ import { Repository } from 'typeorm';
 import { CloudAccount, StorageResource, Finding } from '@storageguard/database';
 import { AwsProvider } from '../providers/aws.provider';
 import { AzureProvider } from '../providers/azure.provider';
+import { GcpProvider } from '../providers/gcp.provider';
+
 
 import { FindingsService } from '../../../api/src/findings/findings.service'; // Ideally move to shared
 import { ControlService } from '../../../api/src/control/control.service';
@@ -23,9 +25,11 @@ export class EventProcessorService {
         private storageResourceRepository: Repository<StorageResource>,
         private awsProvider: AwsProvider,
         private azureProvider: AzureProvider,
+        private gcpProvider: GcpProvider,
         private findingsService: FindingsService,
         private controlService: ControlService,
     ) { }
+
 
 
     async processEvent(rawEvent: any) {
@@ -37,7 +41,8 @@ export class EventProcessorService {
                 await this.processAzureEvent(rawEvent);
 
             } else if (rawEvent.source.includes('google')) {
-                // TODO: GCP event processing
+                await this.processGcpEvent(rawEvent);
+
             } else {
                 this.logger.warn(`Unsupported event source: ${rawEvent.source}`);
             }
@@ -381,6 +386,135 @@ export class EventProcessorService {
         }
     }
 
+    async processGcpEvent(event: any) {
+        try {
+            // GCP Cloud Audit Log format
+            const methodName = event.protoPayload?.methodName;
+            const resourceName = event.protoPayload?.resourceName;
+            const projectId = event.resource?.labels?.project_id;
+
+            if (!resourceName || !projectId) {
+                this.logger.debug('Missing resourceName or projectId in event');
+                return;
+            }
+
+            // Extract bucket name from resourceName
+            const bucketMatch = resourceName.match(/buckets\/([^\/]+)/);
+            if (!bucketMatch) {
+                this.logger.debug('Event does not involve a bucket, ignoring');
+                return;
+            }
+            const bucketName = bucketMatch[1];
+
+            // Find cloud account
+            const cloudAccount = await this.cloudAccountRepository.findOne({
+                where: {
+                    provider: 'gcp',
+                    external_id: projectId,
+                    is_active: true,
+                },
+            });
+
+            if (!cloudAccount) {
+                this.logger.warn(`No active cloud account for GCP project ${projectId}`);
+                return;
+            }
+
+            // Find or fetch storage resource
+            let storageResource = await this.storageResourceRepository.findOne({
+                where: {
+                    tenant_id: cloudAccount.tenant_id,
+                    provider: 'gcp',
+                    resource_id: bucketName,
+                },
+            });
+
+            if (!storageResource) {
+                this.logger.log(`Bucket ${bucketName} not in DB, scanning now`);
+                const resources = await this.gcpProvider.listResources(cloudAccount.credentials);
+                const matched = resources.find(r => r.resource_id === bucketName);
+                if (matched) {
+                    storageResource = await this.saveResource(cloudAccount, matched);
+                } else {
+                    this.logger.warn(`Bucket ${bucketName} not found in provider scan`);
+                    return;
+                }
+            }
+
+            // Determine changed properties based on methodName
+            const changedProperties = this.mapGcpMethodToProperties(methodName);
+            if (changedProperties.length === 0) {
+                this.logger.debug(`Method ${methodName} does not trigger checks`);
+                return;
+            }
+
+            // Run security checks
+            await this.runGcpSecurityChecks(cloudAccount, storageResource, changedProperties);
+        } catch (error) {
+            this.logger.error('Error processing GCP event', error);
+        }
+    }
+
+    private mapGcpMethodToProperties(methodName: string): string[] {
+        const mapping = {
+            'storage.buckets.update': ['policy', 'encryption', 'logging', 'versioning'],
+            'storage.buckets.patch': ['policy', 'encryption', 'logging', 'versioning'],
+            'storage.setIamPermissions': ['policy'],
+            'storage.buckets.delete': [],
+            'storage.objects.create': [],
+            'storage.objects.delete': [],
+            'storage.buckets.updateIamPolicy': ['policy'],
+        };
+        return (mapping as any)[methodName] || [];
+    }
+
+    private async runGcpSecurityChecks(
+        cloudAccount: CloudAccount,
+        resource: StorageResource,
+        changedProperties: string[],
+    ) {
+        const refreshedResource = await this.gcpProvider.refreshResource(
+            cloudAccount.credentials,
+            resource.resource_id,
+        );
+
+        if (!refreshedResource) {
+            this.logger.error(`Failed to refresh GCP resource ${resource.resource_id}`);
+            return;
+        }
+
+        await this.storageResourceRepository.update(resource.id, {
+            configuration: refreshedResource.configuration,
+            last_modified_at: new Date(),
+        });
+
+        const checksToRun = [];
+        if (changedProperties.includes('public_access') || changedProperties.includes('policy')) {
+            checksToRun.push('checkPublicAccess', 'checkPolicy');
+        }
+        if (changedProperties.includes('encryption')) {
+            checksToRun.push('checkEncryption');
+        }
+        if (changedProperties.includes('logging')) {
+            checksToRun.push('checkLogging');
+        }
+        if (changedProperties.includes('versioning')) {
+            checksToRun.push('checkVersioning');
+        }
+
+        for (const checkName of checksToRun) {
+            const checkMethod = (this.gcpProvider as any)[checkName];
+            if (!checkMethod) continue;
+
+            const checkResult = await checkMethod.call(this.gcpProvider, refreshedResource);
+            if (checkResult.failed) {
+                await this.createOrUpdateFinding(resource, checkName, checkResult);
+            } else {
+                await this.resolveFinding(resource, checkName);
+            }
+        }
+    }
+
     private async saveResource(cloudAccount: CloudAccount, resourceData: any): Promise<StorageResource> {
         const resource = this.storageResourceRepository.create({
             tenant_id: cloudAccount.tenant_id,
@@ -395,3 +529,4 @@ export class EventProcessorService {
         return this.storageResourceRepository.save(resource);
     }
 }
+
