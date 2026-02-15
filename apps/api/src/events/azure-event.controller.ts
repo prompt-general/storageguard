@@ -1,6 +1,7 @@
 import { Controller, Post, Headers, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
 import { EventGridDeserializer } from '@azure/eventgrid';
-import { EventProcessorService } from './event-processor.service';
+import { EventProcessorService } from '@storageguard/scanner';
+
 
 @Controller('events/azure')
 export class AzureEventController {

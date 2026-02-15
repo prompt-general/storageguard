@@ -1,5 +1,6 @@
 import { Controller, Post, Body, HttpCode, HttpStatus, Logger } from '@nestjs/common';
-import { EventProcessorService } from './event-processor.service';
+import { EventProcessorService } from '@storageguard/scanner';
+
 
 @Controller('events/gcp')
 export class GcpPubSubController {

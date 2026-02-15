@@ -1,12 +1,11 @@
 import { Module } from '@nestjs/common';
 import { AzureEventController } from './azure-event.controller';
 import { GcpPubSubController } from './gcp-pubsub.controller';
-import { EventProcessorService } from './event-processor.service';
-import { ScannerModule } from '@storageguard/scanner'; // We'll need to expose EventProcessor from scanner or move it to shared
+import { ScannerModule, EventProcessorService } from '@storageguard/scanner';
 
 @Module({
-    imports: [ScannerModule], // So we can use EventProcessorService from scanner
+    imports: [ScannerModule],
     controllers: [AzureEventController, GcpPubSubController],
-    providers: [EventProcessorService],
+    providers: [],
 })
 export class EventsModule { }
