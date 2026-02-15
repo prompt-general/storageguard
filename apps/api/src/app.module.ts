@@ -5,6 +5,7 @@ import { ControlModule } from './control/control.module';
 import { FindingsModule } from './control/findings/findings.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
     imports: [
@@ -14,6 +15,7 @@ import { EventsModule } from './events/events.module';
         ControlModule,
         FindingsModule,
         EventsModule,
+        NotificationModule,
     ],
 })
 export class AppModule { }
