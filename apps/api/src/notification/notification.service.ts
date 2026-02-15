@@ -73,8 +73,9 @@ export class NotificationService {
         };
 
         const message = {
-            text: `*New StorageGuard Finding*\nSeverity: ${finding.severity.toUpperCase()} ${severityEmoji[finding.severity] || ''}\nTitle: ${finding.title}\nResource: ${finding.storage_resource?.resource_id || 'unknown'}\nDescription: ${finding.description}\nRisk Score: ${finding.risk_score}\n<${process.env.APP_URL}/findings/${finding.id}|View in StorageGuard>`,
+            text: `*New StorageGuard Finding*\nSeverity: ${finding.severity.toUpperCase()} ${(severityEmoji as any)[finding.severity] || ''}\nTitle: ${finding.title}\nResource: ${finding.storage_resource?.resource_id || 'unknown'}\nDescription: ${finding.description}\nRisk Score: ${finding.risk_score}\n<${process.env.APP_URL}/findings/${finding.id}|View in StorageGuard>`,
         };
+
 
         await firstValueFrom(this.httpService.post(webhookUrl, message));
     }
@@ -132,8 +133,11 @@ export class NotificationService {
 
     async updateChannel(id: string, data: Partial<NotificationChannel>): Promise<NotificationChannel> {
         await this.channelRepository.update(id, data);
-        return this.channelRepository.findOne({ where: { id } });
+        const channel = await this.channelRepository.findOne({ where: { id } as any });
+        if (!channel) throw new Error('Channel not found');
+        return channel;
     }
+
 
     async deleteChannel(id: string): Promise<void> {
         await this.channelRepository.delete(id);
