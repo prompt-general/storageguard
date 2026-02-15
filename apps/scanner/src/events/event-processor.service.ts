@@ -324,7 +324,8 @@ export class EventProcessorService {
             'Microsoft.Storage.StorageAccountUpdated': ['public_access', 'encryption', 'logging', 'versioning'],
             'Microsoft.Storage.StorageAccountDeleted': [],
         };
-        return mapping[eventType] || [];
+        return (mapping as any)[eventType] || [];
+
     }
 
     private async runAzureSecurityChecks(
@@ -367,7 +368,8 @@ export class EventProcessorService {
         }
 
         for (const checkName of checksToRun) {
-            const checkMethod = this.azureProvider[checkName];
+            const checkMethod = (this.azureProvider as any)[checkName];
+
             if (!checkMethod) continue;
 
             const checkResult = await checkMethod.call(this.azureProvider, refreshedResource);

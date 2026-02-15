@@ -95,7 +95,8 @@ export class AzureProvider implements CloudProviderInterface {
                                 public_access: publicAccess !== 'none',
                                 encryption_enabled: properties.encryption?.services?.blob?.enabled || false,
                                 versioning_enabled: blobProperties?.containerDeleteRetentionPolicy?.enabled || false,
-                                logging_enabled: !!blobProperties?.logging?.delete || false,
+                                logging_enabled: !!(blobProperties as any).logging?.delete || false,
+
                                 policy: {
                                     containersPublicAccess: publicAccess,
                                     networkAcls: properties.networkRuleSet,
@@ -228,9 +229,8 @@ export class AzureProvider implements CloudProviderInterface {
                 }
             }
 
-            if (!account) return null;
-
-            const resourceGroup = this.extractResourceGroup(account.id);
+            if (!account || !account.id) return null;
+            const resourceGroup = this.extractResourceGroup(account.id!);
             const properties = await storageClient.storageAccounts.getProperties(resourceGroup, accountName);
 
             let blobProperties: BlobServiceProperties;
@@ -259,7 +259,8 @@ export class AzureProvider implements CloudProviderInterface {
                     public_access: publicAccess !== 'none',
                     encryption_enabled: properties.encryption?.services?.blob?.enabled || false,
                     versioning_enabled: blobProperties?.containerDeleteRetentionPolicy?.enabled || false,
-                    logging_enabled: !!blobProperties?.logging?.delete || false,
+                    logging_enabled: !!(blobProperties as any).logging?.delete || false,
+
                     policy: {
                         containersPublicAccess: publicAccess,
                         networkAcls: properties.networkRuleSet,
