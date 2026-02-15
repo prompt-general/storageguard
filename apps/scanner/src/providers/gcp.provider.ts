@@ -193,4 +193,44 @@ export class GcpProvider implements CloudProviderInterface {
     async enableVersioning(resourceId: string, credentials: any): Promise<void> {
         // TODO
     }
+
+    async refreshResource(credentials: any, bucketName: string): Promise<StorageResource | null> {
+        const storage = this.getStorageClient(credentials);
+        try {
+            const bucket = storage.bucket(bucketName);
+            const [metadata] = await bucket.getMetadata();
+            const [iam] = await bucket.iam.getPolicy();
+
+            const publicAccess = this.checkPublicAccessFromIam(iam);
+            const encryptionEnabled = !!(metadata.encryption?.defaultKmsKeyName);
+            const versioningEnabled = metadata.versioning?.enabled === true;
+            const loggingEnabled = !!(metadata.logging?.logBucket);
+
+            return {
+                id: '',
+                tenant_id: '',
+                account_id: '',
+                provider: 'gcp',
+                resource_type: 'bucket',
+                resource_id: bucketName,
+                region: metadata.location || 'us',
+                configuration: {
+                    public_access: publicAccess,
+                    encryption_enabled: encryptionEnabled,
+                    versioning_enabled: versioningEnabled,
+                    logging_enabled: loggingEnabled,
+                    policy: {
+                        iam: iam,
+                        labels: metadata.labels || {},
+                    },
+                    tags: metadata.labels || {},
+                },
+                discovered_at: new Date(),
+                last_modified_at: metadata.updated ? new Date(metadata.updated) : undefined,
+            };
+        } catch (error) {
+            this.logger.error(`Error refreshing GCP bucket ${bucketName}:`, error);
+            return null;
+        }
+    }
 }
