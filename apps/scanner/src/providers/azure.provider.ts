@@ -215,39 +215,27 @@ export class AzureProvider implements CloudProviderInterface {
     }
 
     async refreshResource(credentials: any, resourceId: string): Promise<StorageResource | null> {
+        // resourceId format: "accountName/containerName"
+        const [accountName, containerName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) return null;
+
+        const cred = this.getCredential(credentials);
+        const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+        const blobServiceClient = BlobServiceClient.fromConnectionString(
+            `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+        );
+
         try {
-            const [accountName, containerName] = resourceId.split('/');
-            const cred = this.getCredential(credentials);
-            const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
-
-            // Find the account to get its resource group and properties
-            let account;
-            for await (const acc of storageClient.storageAccounts.list()) {
-                if (acc.name === accountName) {
-                    account = acc;
-                    break;
-                }
-            }
-
-            if (!account || !account.id) return null;
-            const resourceGroup = this.extractResourceGroup(account.id!);
-            const properties = await storageClient.storageAccounts.getProperties(resourceGroup, accountName);
-
-            let blobProperties: BlobServiceProperties;
-            try {
-                blobProperties = await storageClient.blobServices.getServiceProperties(resourceGroup, accountName);
-            } catch (e) {
-                blobProperties = {};
-            }
-
-            const blobServiceClient = BlobServiceClient.fromConnectionString(
-                `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
-            );
             const containerClient = blobServiceClient.getContainerClient(containerName);
             const containerProperties = await containerClient.getProperties();
             const publicAccess = containerProperties.blobPublicAccess || 'none';
 
-            return {
+            // Get account properties
+            const properties = await storageClient.storageAccounts.getProperties(resourceGroup, accountName);
+            const blobProperties = await storageClient.blobServices.getServiceProperties(resourceGroup, accountName);
+
+            const resource: StorageResource = {
                 id: '',
                 tenant_id: '',
                 account_id: '',
@@ -260,19 +248,36 @@ export class AzureProvider implements CloudProviderInterface {
                     encryption_enabled: properties.encryption?.services?.blob?.enabled || false,
                     versioning_enabled: blobProperties?.containerDeleteRetentionPolicy?.enabled || false,
                     logging_enabled: !!(blobProperties as any).logging?.delete || false,
-
                     policy: {
                         containersPublicAccess: publicAccess,
                         networkAcls: properties.networkRuleSet,
                     },
-                    tags: account.tags || {},
+                    tags: properties.tags || {},
                 },
                 discovered_at: new Date(),
                 last_modified_at: containerProperties.lastModified,
             };
+            return resource;
         } catch (error) {
-            this.logger.error(`Error refreshing Azure resource ${resourceId}:`, error);
+            this.logger.error(`Error refreshing container ${resourceId}:`, error);
             return null;
         }
     }
+
+    private async getResourceGroupForAccount(credentials: any, accountName: string): Promise<string | null> {
+        const cred = this.getCredential(credentials);
+        const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+        let accountId: string | undefined;
+
+        for await (const account of storageClient.storageAccounts.list()) {
+            if (account.name === accountName) {
+                accountId = account.id;
+                break;
+            }
+        }
+
+        if (!accountId) return null;
+        return this.extractResourceGroup(accountId);
+    }
 }
+
