@@ -160,6 +160,21 @@ export class SensitivityScannerService {
         }
     }
 
+    @Cron(CronExpression.EVERY_WEEK)
+    async scanAllResources() {
+        this.logger.log('Starting scheduled sensitivity scan of all resources');
+        const resources = await this.resourceRepository.find();
+        for (const resource of resources) {
+            try {
+                await this.scanResource(resource.id, resource.tenant_id);
+            } catch (e) {
+                this.logger.error(`Failed to scan resource ${resource.id}: ${e.message}`);
+            }
+        }
+        this.logger.log('Completed scheduled sensitivity scan');
+    }
+
+
     private async scanObject(provider: any, credentials: any, resource: StorageResource, object: any): Promise<string[]> {
         const sensitiveTypes: string[] = [];
         const objectKey = object.key || object.name || object.Key;

@@ -165,11 +165,17 @@ export class ScannerService {
                 resource.configuration
             );
 
+            const containsSensitiveData = resource.sensitivity?.has_sensitive_data || false;
+            const sensitiveDataTypes = resource.sensitivity?.sensitive_data_types || [];
+
             const riskScore = this.riskEngine.calculateRiskScore({
                 baseSeverity,
                 ...exposure,
                 businessCriticality: businessContext.criticality || 1.0,
+                containsSensitiveData,
+                sensitiveDataTypes,
             });
+
 
 
             await this.findingsService.create({
