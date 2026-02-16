@@ -2,7 +2,6 @@
 import { Control } from '../entities/control.entity';
 import { FindingSeverity } from '../entities/finding.entity';
 
-
 export const DEFAULT_CONTROLS: Partial<Control>[] = [
     {
         id: 'SG-001',
@@ -15,8 +14,10 @@ export const DEFAULT_CONTROLS: Partial<Control>[] = [
             gcp: { service: 'storage', check_type: 'iam_policy' },
         },
         compliance_mapping: {
-            cis: ['CIS 2.1.3'],
-            soc2: ['CC6.1'],
+            cis: ['CIS 2.1.3'], // CIS AWS Foundations Benchmark
+            soc2: ['CC6.1'], // Logical access controls
+            iso27001: ['A.9.1.2'], // Access to networks and network services
+            nist: ['AC-3'], // Access Enforcement
         },
     },
     {
@@ -32,6 +33,8 @@ export const DEFAULT_CONTROLS: Partial<Control>[] = [
         compliance_mapping: {
             cis: ['CIS 2.1.1'],
             iso27001: ['A.10.1.1'],
+            soc2: ['CC6.7'], // Encryption of data at rest
+            nist: ['SC-28'], // Protection of Information at Rest
         },
     },
     {
@@ -45,7 +48,10 @@ export const DEFAULT_CONTROLS: Partial<Control>[] = [
             gcp: { service: 'storage', check_type: 'logging' },
         },
         compliance_mapping: {
-            soc2: ['CC7.1'],
+            soc2: ['CC7.1'], // Monitoring and detection
+            iso27001: ['A.12.4.1'], // Event logging
+            cis: ['CIS 2.1.2'],
+            nist: ['AU-2'], // Audit Events
         },
     },
     {
@@ -57,6 +63,10 @@ export const DEFAULT_CONTROLS: Partial<Control>[] = [
             aws: { service: 's3', check_type: 'versioning' },
             azure: { resource_type: 'Microsoft.Storage/storageAccounts', check_type: 'delete_retention' },
             gcp: { service: 'storage', check_type: 'versioning' },
+        },
+        compliance_mapping: {
+            iso27001: ['A.12.3.1'], // Backup
+            nist: ['CP-9'], // System Backup
         },
     },
     {
@@ -71,6 +81,9 @@ export const DEFAULT_CONTROLS: Partial<Control>[] = [
         },
         compliance_mapping: {
             cis: ['CIS 2.1.1'],
+            soc2: ['CC6.1'],
+            iso27001: ['A.9.1.2'],
+            nist: ['AC-3'],
         },
     },
 ];
