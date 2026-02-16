@@ -15,8 +15,10 @@ import { GcpProvider } from './providers/gcp.provider';
 
 import { FindingsModule } from '../../../api/src/control/findings/findings.module';
 import { ControlModule } from '../../../api/src/control/control.module';
+import { SensitivityModule } from './sensitivity/sensitivity.module';
 
 @Module({
+
     imports: [
         ConfigModule.forRoot(),
         ScheduleModule.forRoot(),
