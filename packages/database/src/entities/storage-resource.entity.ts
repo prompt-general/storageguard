@@ -56,6 +56,18 @@ export class StorageResource extends BaseEntity {
         data_sensitivity?: string; // high, medium, low
     };
 
+    @Column({ type: 'jsonb', nullable: true })
+    sensitivity: {
+        scanned_at: Date;
+        has_sensitive_data: boolean;
+        sensitive_data_types: string[]; // e.g., ['pii', 'credential', 'financial']
+        sensitive_object_count: number;
+        total_objects_scanned: number;
+        scan_status: 'pending' | 'in_progress' | 'completed' | 'failed';
+        scan_error?: string;
+    };
+
+
 
     @Column({ type: 'timestamptz' })
     discovered_at: Date;
