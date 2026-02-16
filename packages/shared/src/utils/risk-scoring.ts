@@ -6,7 +6,10 @@ export interface RiskScoreFactors {
     isInternetAccessible: boolean;
     isAuthenticatedUsersOnly: boolean;
     businessCriticality?: number; // 0.5 - 2.0 multiplier, default 1.0
+    containsSensitiveData?: boolean;
+    sensitiveDataTypes?: string[];
 }
+
 
 export class RiskScoringEngine {
     private severityWeights: Record<FindingSeverity, number> = {
@@ -29,15 +32,32 @@ export class RiskScoringEngine {
             exposureMultiplier = 1.2;
         }
 
+        // Sensitivity multiplier
+        let sensitivityMultiplier = 1.0;
+        if (factors.containsSensitiveData) {
+            // Increase risk based on types: PII might be 1.3, credentials 1.5, etc.
+            const maxSensitivity = factors.sensitiveDataTypes?.reduce((max, type) => {
+                const multipliers: { [key: string]: number } = {
+                    pii: 1.3,
+                    credential: 1.5,
+                    financial: 1.4,
+                };
+                const mult = multipliers[type] || 1.2;
+                return Math.max(max, mult);
+            }, 1.2) || 1.2;
+            sensitivityMultiplier = maxSensitivity;
+        }
+
         // Business criticality multiplier (default 1.0)
         const criticalityMultiplier = factors.businessCriticality || 1.0;
 
         // Calculate final score (0-100)
-        let finalScore = score * exposureMultiplier * criticalityMultiplier;
+        let finalScore = score * exposureMultiplier * sensitivityMultiplier * criticalityMultiplier;
 
         // Cap at 100
         return Math.min(Math.round(finalScore), 100);
     }
+
 
 
     // Phase 1: Simple exposure detection
