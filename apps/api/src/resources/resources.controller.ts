@@ -1,41 +1,39 @@
-import { Controller, Get, Body, Put, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Put, Param, Body, UseGuards, Query } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../auth/guards/roles.guard';
-import { Roles } from '../auth/decorators/roles.decorator';
 import { Tenant } from '../auth/decorators/tenant.decorator';
-import { UserRole } from '@storageguard/database';
 import { ResourcesService } from './resources.service';
 
 @ApiTags('resources')
 @ApiBearerAuth()
 @Controller('resources')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard)
 export class ResourcesController {
-    constructor(private readonly resourcesService: ResourcesService) { }
+    constructor(private resourcesService: ResourcesService) { }
 
     @Get()
-    @Roles(UserRole.ADMIN, UserRole.SECURITY_ENGINEER)
-    @ApiOperation({ summary: 'List all storage resources' })
-    async findAll(@Tenant() tenantId: string) {
-        return this.resourcesService.findAll(tenantId);
+    @ApiOperation({ summary: 'List all storage resources with optional filters' })
+    async list(
+        @Tenant() tenantId: string,
+        @Query('environment') environment?: string,
+        @Query('team') team?: string,
+    ) {
+        return this.resourcesService.listResources(tenantId, { environment, team });
     }
 
-    @Get(':id')
-    @Roles(UserRole.ADMIN, UserRole.SECURITY_ENGINEER)
-    @ApiOperation({ summary: 'Get a single resource' })
-    async findOne(@Param('id') id: string, @Tenant() tenantId: string) {
-        return this.resourcesService.findOne(id, tenantId);
+    @Get(':id/context')
+    @ApiOperation({ summary: 'Get business context for a resource' })
+    async getContext(@Param('id') id: string, @Tenant() tenantId: string) {
+        return this.resourcesService.getBusinessContext(id, tenantId);
     }
 
-    @Put(':id/business-context')
-    @Roles(UserRole.ADMIN, UserRole.SECURITY_ENGINEER)
+    @Put(':id/context')
     @ApiOperation({ summary: 'Update business context for a resource' })
-    async updateBusinessContext(
+    async updateContext(
         @Param('id') id: string,
         @Tenant() tenantId: string,
-        @Body() businessContext: any,
+        @Body() context: any,
     ) {
-        return this.resourcesService.updateBusinessContext(id, tenantId, businessContext);
+        return this.resourcesService.updateBusinessContext(id, tenantId, context);
     }
 }

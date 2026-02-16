@@ -10,33 +10,45 @@ export class ResourcesService {
         private resourceRepository: Repository<StorageResource>,
     ) { }
 
-    async findAll(tenantId: string) {
-        return this.resourceRepository.find({
-            where: { tenant_id: tenantId },
-            order: { discovered_at: 'DESC' },
-        });
-    }
-
-    async findOne(id: string, tenantId: string) {
+    async updateBusinessContext(
+        resourceId: string,
+        tenantId: string,
+        context: any,
+    ): Promise<StorageResource> {
         const resource = await this.resourceRepository.findOne({
-            where: { id, tenant_id: tenantId },
+            where: { id: resourceId, tenant_id: tenantId },
         });
-
         if (!resource) {
-            throw new NotFoundException(`Resource with ID ${id} not found`);
+            throw new NotFoundException('Resource not found');
         }
-
-        return resource;
-    }
-
-    async updateBusinessContext(id: string, tenantId: string, businessContext: any) {
-        const resource = await this.findOne(id, tenantId);
-
         resource.business_context = {
             ...resource.business_context,
-            ...businessContext,
+            ...context,
         };
-
         return this.resourceRepository.save(resource);
+    }
+
+    async getBusinessContext(resourceId: string, tenantId: string): Promise<any> {
+        const resource = await this.resourceRepository.findOne({
+            where: { id: resourceId, tenant_id: tenantId },
+            select: ['business_context'] as any,
+        });
+        if (!resource) {
+            throw new NotFoundException('Resource not found');
+        }
+        return resource.business_context || {};
+    }
+
+    async listResources(tenantId: string, filters?: any): Promise<StorageResource[]> {
+        const query = this.resourceRepository.createQueryBuilder('resource')
+            .where('resource.tenant_id = :tenantId', { tenantId });
+
+        if (filters?.environment) {
+            query.andWhere("resource.business_context->>'environment' = :env", { env: filters.environment });
+        }
+        if (filters?.team) {
+            query.andWhere("resource.business_context->>'team' = :team", { team: filters.team });
+        }
+        return query.getMany();
     }
 }
