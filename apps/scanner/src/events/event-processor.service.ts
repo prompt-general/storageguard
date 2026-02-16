@@ -196,6 +196,7 @@ export class EventProcessorService {
         const remediationAvailable = await this.controlService.isRemediationAvailable(controlId);
         const remediationGuidance = await this.controlService.getRemediationGuidance(controlId);
 
+        const businessContext = resource.business_context || {};
         const exposure = this.riskEngine.detectExposure(
             resource.configuration.policy,
             resource.configuration,
@@ -203,7 +204,9 @@ export class EventProcessorService {
         const riskScore = this.riskEngine.calculateRiskScore({
             baseSeverity,
             ...exposure,
+            businessCriticality: businessContext.criticality || 1.0,
         });
+
 
         await this.findingsService.create({
             tenant_id: resource.tenant_id,

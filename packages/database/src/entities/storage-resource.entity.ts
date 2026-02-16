@@ -48,6 +48,15 @@ export class StorageResource extends BaseEntity {
         tags: Record<string, string>;
     };
 
+    @Column({ type: 'jsonb', nullable: true })
+    business_context: {
+        criticality?: number;    // 0.5 to 2.0
+        owner?: string;
+        environment?: string;    // prod, staging, dev
+        data_sensitivity?: string; // high, medium, low
+    };
+
+
     @Column({ type: 'timestamptz' })
     discovered_at: Date;
 
