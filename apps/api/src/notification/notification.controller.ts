@@ -4,9 +4,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Tenant } from '../auth/decorators/tenant.decorator';
-import { UserRole } from '@storageguard/database';
+import { UserRole, NotificationChannel } from '@storageguard/database';
 import { NotificationService } from './notification.service';
-import { NotificationChannel } from './entities/notification-channel.entity';
+
 
 @ApiTags('notifications')
 @ApiBearerAuth()

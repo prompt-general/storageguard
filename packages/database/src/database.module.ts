@@ -13,14 +13,15 @@ import * as entities from './entities';
                 username: process.env.DB_USERNAME || 'postgres',
                 password: process.env.DB_PASSWORD || 'postgres',
                 database: process.env.DB_DATABASE || 'storageguard',
-                entities: Object.values(entities),
+                entities: Object.values(entities).filter(val => typeof val === 'function'),
                 synchronize: process.env.NODE_ENV === 'development',
                 logging: process.env.NODE_ENV === 'development',
                 migrations: ['dist/migrations/*.js'],
                 migrationsRun: true,
             }),
         }),
-        TypeOrmModule.forFeature(Object.values(entities)),
+        TypeOrmModule.forFeature(Object.values(entities).filter(val => typeof val === 'function')),
+
     ],
     exports: [TypeOrmModule],
 })

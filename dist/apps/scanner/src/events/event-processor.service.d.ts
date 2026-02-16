@@ -1,0 +1,34 @@
+import { Repository } from 'typeorm';
+import { CloudAccount, StorageResource } from '@storageguard/database';
+import { AwsProvider } from '../providers/aws.provider';
+import { AzureProvider } from '../providers/azure.provider';
+import { GcpProvider } from '../providers/gcp.provider';
+import { FindingsService } from '../../../api/src/findings/findings.service';
+import { ControlService } from '../../../api/src/control/control.service';
+export declare class EventProcessorService {
+    private cloudAccountRepository;
+    private storageResourceRepository;
+    private awsProvider;
+    private azureProvider;
+    private gcpProvider;
+    private findingsService;
+    private controlService;
+    private readonly logger;
+    private riskEngine;
+    constructor(cloudAccountRepository: Repository<CloudAccount>, storageResourceRepository: Repository<StorageResource>, awsProvider: AwsProvider, azureProvider: AzureProvider, gcpProvider: GcpProvider, findingsService: FindingsService, controlService: ControlService);
+    processEvent(rawEvent: any): Promise<void>;
+    private processAwsEvent;
+    private extractBucketFromArn;
+    private mapEventToProperties;
+    private runSecurityChecks;
+    private createOrUpdateFinding;
+    private resolveFinding;
+    private mapCheckToControlId;
+    processAzureEvent(event: any): Promise<void>;
+    private mapAzureEventToProperties;
+    private runAzureSecurityChecks;
+    processGcpEvent(event: any): Promise<void>;
+    private mapGcpMethodToProperties;
+    private runGcpSecurityChecks;
+    private saveResource;
+}

@@ -6,3 +6,5 @@ export * from './finding.entity';
 export * from './control.entity';
 export * from './remediation-action.entity';
 export * from './user.entity';
+export * from './notification-channel.entity';
+export * from './notification-log.entity';

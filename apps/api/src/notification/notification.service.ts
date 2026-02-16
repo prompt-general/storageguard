@@ -3,9 +3,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { HttpService } from '@nestjs/axios';
 import { firstValueFrom } from 'rxjs';
-import { NotificationChannel } from './entities/notification-channel.entity';
-import { NotificationLog } from './entities/notification-log.entity';
-import { Finding } from '@storageguard/database';
+import { NotificationChannel, NotificationLog, Finding } from '@storageguard/database';
+
 
 @Injectable()
 export class NotificationService {

@@ -1,5 +1,7 @@
 // packages/database/src/seed/controls.seed.ts
-import { Control, FindingSeverity } from '../entities/control.entity';
+import { Control } from '../entities/control.entity';
+import { FindingSeverity } from '../entities/finding.entity';
+
 
 export const DEFAULT_CONTROLS: Partial<Control>[] = [
     {

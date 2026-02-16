@@ -1,5 +1,6 @@
 import { Entity, Column } from 'typeorm';
-import { BaseEntity } from '@storageguard/database';
+import { BaseEntity } from './base.entity';
+
 
 @Entity('notification_log')
 export class NotificationLog extends BaseEntity {

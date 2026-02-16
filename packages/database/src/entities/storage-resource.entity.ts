@@ -1,8 +1,9 @@
 // packages/database/src/entities/storage-resource.entity.ts
 import { Entity, Column, ManyToOne, JoinColumn, OneToMany, Index } from 'typeorm';
 import { BaseEntity } from './base.entity';
-import { CloudAccount } from './cloud-account.entity';
+import { CloudAccount, CloudProvider } from './cloud-account.entity';
 import { Finding } from './finding.entity';
+
 
 export enum ResourceType {
     BUCKET = 'bucket', // AWS S3, GCS

@@ -3,8 +3,8 @@ import { HttpModule } from '@nestjs/axios';
 import { NotificationService } from './notification.service';
 import { NotificationController } from './notification.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { NotificationChannel } from './entities/notification-channel.entity';
-import { NotificationLog } from './entities/notification-log.entity';
+import { NotificationChannel, NotificationLog } from '@storageguard/database';
+
 
 @Module({
     imports: [
