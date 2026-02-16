@@ -404,8 +404,85 @@ export class AzureProvider implements CloudProviderInterface {
             }
         }
 
-        if (!accountId) return null;
         return this.extractResourceGroup(accountId);
     }
+
+    async listObjects(credentials: any, resourceId: string, region?: string, limit: number = 100): Promise<any[]> {
+        const [accountName, containerName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(
+            `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+        );
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const blobs = [];
+        const iter = containerClient.listBlobsFlat();
+        let count = 0;
+        for await (const blob of iter) {
+            blobs.push({
+                name: blob.name,
+                size: blob.properties.contentLength,
+                lastModified: blob.properties.lastModified,
+                contentType: blob.properties.contentType,
+            });
+            count++;
+            if (count >= limit) break;
+        }
+        return blobs;
+    }
+
+    async getObjectMetadata(credentials: any, resourceId: string, objectKey: string): Promise<any> {
+        const [accountName, containerName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(
+            `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+        );
+        const blobClient = blobServiceClient.getContainerClient(containerName).getBlobClient(objectKey);
+
+        try {
+            const properties = await blobClient.getProperties();
+            return {
+                contentType: properties.contentType,
+                contentLength: properties.contentLength,
+                metadata: properties.metadata,
+                lastModified: properties.lastModified,
+            };
+        } catch (error) {
+            this.logger.error(`Error getting metadata for ${objectKey} in ${resourceId}:`, error);
+            return null;
+        }
+    }
+
+    async getObjectContent(credentials: any, resourceId: string, objectKey: string, region?: string, maxBytes?: number): Promise<Buffer> {
+        const [accountName, containerName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const blobServiceClient = BlobServiceClient.fromConnectionString(
+            `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+        );
+        const blobClient = blobServiceClient.getContainerClient(containerName).getBlobClient(objectKey);
+
+        try {
+            const downloadResponse = await blobClient.download(0, maxBytes);
+            const stream = downloadResponse.readableStreamBody;
+            if (!stream) return Buffer.alloc(0);
+
+            const chunks = [];
+            for await (const chunk of stream) {
+                chunks.push(chunk);
+            }
+            return Buffer.concat(chunks);
+        } catch (error) {
+            this.logger.error(`Error getting content for ${objectKey} in ${resourceId}:`, error);
+            return null;
+        }
+    }
 }
+
+
 
