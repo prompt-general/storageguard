@@ -1,0 +1,20 @@
+{
+    "name": "@storageguard/cli",
+    "version": "0.1.0",
+    "description": "StorageGuard CI/CD CLI tool",
+    "main": "dist/index.js",
+    "bin": {
+        "storageguard-ci": "dist/index.js"
+    },
+    "scripts": {
+        "build": "tsc",
+        "start": "node dist/index.js"
+    },
+    "dependencies": {
+        "axios": "^1.6.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.0.0",
+        "typescript": "^5.0.0"
+    }
+}
