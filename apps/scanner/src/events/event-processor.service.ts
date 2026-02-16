@@ -2,7 +2,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CloudAccount, StorageResource, Finding } from '@storageguard/database';
+import { CloudAccount, StorageResource, Finding, CloudProvider } from '@storageguard/database';
+
 import { AwsProvider } from '../providers/aws.provider';
 import { AzureProvider } from '../providers/azure.provider';
 import { GcpProvider } from '../providers/gcp.provider';
@@ -80,7 +81,8 @@ export class EventProcessorService {
         let storageResource = await this.storageResourceRepository.findOne({
             where: {
                 tenant_id: cloudAccount.tenant_id,
-                provider: 'aws',
+                provider: CloudProvider.AWS,
+
                 resource_id: bucketName,
             },
         });
@@ -270,10 +272,11 @@ export class EventProcessorService {
             // Find cloud account
             const cloudAccount = await this.cloudAccountRepository.findOne({
                 where: {
-                    provider: 'azure',
+                    provider: CloudProvider.AZURE,
                     external_id: subscriptionId,
                     is_active: true,
                 },
+
             });
 
             if (!cloudAccount) {
@@ -286,9 +289,10 @@ export class EventProcessorService {
             let storageResource = await this.storageResourceRepository.findOne({
                 where: {
                     tenant_id: cloudAccount.tenant_id,
-                    provider: 'azure',
+                    provider: CloudProvider.AZURE,
                     resource_id: resourceId,
                 },
+
             });
 
             if (!storageResource) {
@@ -409,10 +413,11 @@ export class EventProcessorService {
             // Find cloud account
             const cloudAccount = await this.cloudAccountRepository.findOne({
                 where: {
-                    provider: 'gcp',
+                    provider: CloudProvider.GCP,
                     external_id: projectId,
                     is_active: true,
                 },
+
             });
 
             if (!cloudAccount) {
@@ -424,9 +429,10 @@ export class EventProcessorService {
             let storageResource = await this.storageResourceRepository.findOne({
                 where: {
                     tenant_id: cloudAccount.tenant_id,
-                    provider: 'gcp',
+                    provider: CloudProvider.GCP,
                     resource_id: bucketName,
                 },
+
             });
 
             if (!storageResource) {
