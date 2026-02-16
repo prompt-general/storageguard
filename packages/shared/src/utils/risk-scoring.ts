@@ -1,11 +1,11 @@
-// packages/shared/src/utils/risk-scoring.ts
-import { FindingSeverity } from '@storageguard/types';
+import { FindingSeverity } from '@storageguard/database';
 
 export interface RiskScoreFactors {
+
     baseSeverity: FindingSeverity;
     isInternetAccessible: boolean;
     isAuthenticatedUsersOnly: boolean;
-    businessCriticality?: number; // 0.5 - 2.0 multiplier
+    businessCriticality?: number; // 0.5 - 2.0 multiplier, default 1.0
 }
 
 export class RiskScoringEngine {
@@ -24,12 +24,12 @@ export class RiskScoringEngine {
         // Exposure multiplier
         let exposureMultiplier = 1.0;
         if (factors.isInternetAccessible) {
-            exposureMultiplier = 1.5; // 50% increase for internet-accessible
+            exposureMultiplier = 1.5;
         } else if (factors.isAuthenticatedUsersOnly) {
-            exposureMultiplier = 1.2; // 20% increase for authenticated users
+            exposureMultiplier = 1.2;
         }
 
-        // Business criticality multiplier
+        // Business criticality multiplier (default 1.0)
         const criticalityMultiplier = factors.businessCriticality || 1.0;
 
         // Calculate final score (0-100)
@@ -38,6 +38,7 @@ export class RiskScoringEngine {
         // Cap at 100
         return Math.min(Math.round(finalScore), 100);
     }
+
 
     // Phase 1: Simple exposure detection
     detectExposure(policy: any, configuration: any): {
