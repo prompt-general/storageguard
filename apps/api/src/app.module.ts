@@ -10,6 +10,7 @@ import { ResourcesModule } from './resources/resources.module';
 import { RemediationModule } from './remediation/remediation.module';
 import { ComplianceModule } from './compliance/compliance.module';
 import { SensitivityModule } from './sensitivity/sensitivity.module';
+import { CiModule } from './ci/ci.module';
 
 @Module({
     imports: [
@@ -24,7 +25,9 @@ import { SensitivityModule } from './sensitivity/sensitivity.module';
         RemediationModule,
         ComplianceModule,
         SensitivityModule,
+        CiModule,
     ],
+
 
 })
 

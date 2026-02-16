@@ -1,5 +1,7 @@
-// packages/types/src/findings.types.ts
+import { FindingSeverity, FindingStatus } from './common.types';
+
 export interface Finding {
+
     id: string;
     tenant_id: string;
     resource_id: string;

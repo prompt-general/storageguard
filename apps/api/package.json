@@ -26,8 +26,13 @@
         "@storageguard/scanner": "*",
         "@storageguard/shared": "*",
         "@storageguard/types": "*",
+        "@types/js-yaml": "^4.0.9",
+        "@types/multer": "^2.0.0",
         "class-transformer": "^0.5.1",
         "class-validator": "^0.14.0",
+        "hcl2-parser": "^1.0.3",
+        "js-yaml": "^4.1.1",
+        "multer": "^2.0.2",
         "nodemailer": "^8.0.1",
         "reflect-metadata": "^0.1.13",
         "typeorm": "^0.3.0"
