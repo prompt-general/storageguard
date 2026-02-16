@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { Cron, CronExpression } from '@nestjs/schedule';
+
 import { Repository } from 'typeorm';
 import { StorageResource, CloudAccount } from '@storageguard/database';
 import { AwsProvider } from '../providers/aws.provider';
