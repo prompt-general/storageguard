@@ -198,21 +198,149 @@ export class AzureProvider implements CloudProviderInterface {
     }
 
     // Remediation actions (Phase 2)
-    async removePublicAccess(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async removePublicAccess(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const [accountName, containerName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const cred = this.getCredential(credentials);
+        const blobServiceClient = BlobServiceClient.fromConnectionString(
+            `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${await this.getAccountKey(credentials, resourceGroup, accountName)}`
+        );
+        const containerClient = blobServiceClient.getContainerClient(containerName);
+
+        const currentAcl = await containerClient.getAccessPolicy();
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: currentAcl.blobPublicAccess !== 'none' && currentAcl.blobPublicAccess !== undefined,
+                currentState: { publicAccess: currentAcl.blobPublicAccess },
+                plannedAction: 'Set container public access to private',
+            };
+        }
+
+        await containerClient.setAccessPolicy('private');
+        return {
+            success: true,
+            newState: { publicAccess: 'none' },
+            rollbackData: { publicAccess: currentAcl.blobPublicAccess },
+        };
     }
 
-    async enableEncryption(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableEncryption(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        // Encryption is set at storage account level, not per container.
+        const [accountName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const cred = this.getCredential(credentials);
+        const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+
+        const account = await storageClient.storageAccounts.getProperties(resourceGroup, accountName);
+        const currentEncryption = account.encryption?.services?.blob?.enabled || false;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentEncryption,
+                currentState: { encryption: currentEncryption },
+                plannedAction: 'Enable encryption at rest for blob service',
+            };
+        }
+
+        // Enable encryption if not already enabled
+        await storageClient.storageAccounts.update(resourceGroup, accountName, {
+            encryption: {
+                services: {
+                    blob: { enabled: true },
+                },
+                keySource: 'Microsoft.Storage',
+            },
+        });
+
+        return {
+            success: true,
+            newState: { encryption: true },
+            rollbackData: { encryption: currentEncryption },
+        };
     }
 
-    async enableLogging(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableLogging(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        // Logging for Azure Blob is set at storage account level.
+        const [accountName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const cred = this.getCredential(credentials);
+        const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+
+        const blobProperties = await storageClient.blobServices.getServiceProperties(resourceGroup, accountName);
+        const currentLogging = blobProperties.logging?.delete || false;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentLogging,
+                currentState: { logging: currentLogging },
+                plannedAction: 'Enable logging for read, write, delete operations',
+            };
+        }
+
+        await storageClient.blobServices.setServiceProperties(resourceGroup, accountName, {
+            logging: {
+                delete: true,
+                read: true,
+                write: true,
+                retentionPolicy: {
+                    enabled: true,
+                    days: 7,
+                },
+            },
+        });
+
+        return {
+            success: true,
+            newState: { logging: true },
+            rollbackData: { logging: currentLogging },
+        };
     }
 
-    async enableVersioning(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableVersioning(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        // Versioning for Azure Blob is called "soft delete" for containers.
+        const [accountName] = resourceId.split('/');
+        const resourceGroup = await this.getResourceGroupForAccount(credentials, accountName);
+        if (!resourceGroup) throw new Error('Resource group not found');
+
+        const cred = this.getCredential(credentials);
+        const storageClient = new StorageManagementClient(cred, credentials.subscriptionId);
+
+        const blobProperties = await storageClient.blobServices.getServiceProperties(resourceGroup, accountName);
+        const currentSoftDelete = blobProperties.containerDeleteRetentionPolicy?.enabled || false;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentSoftDelete,
+                currentState: { softDelete: currentSoftDelete },
+                plannedAction: 'Enable container soft delete with retention period 7 days',
+            };
+        }
+
+        await storageClient.blobServices.setServiceProperties(resourceGroup, accountName, {
+            containerDeleteRetentionPolicy: {
+                enabled: true,
+                days: 7,
+            },
+        });
+
+        return {
+            success: true,
+            newState: { softDelete: true },
+            rollbackData: { softDelete: currentSoftDelete },
+        };
     }
+
 
     async refreshResource(credentials: any, resourceId: string): Promise<StorageResource | null> {
         // resourceId format: "accountName/containerName"

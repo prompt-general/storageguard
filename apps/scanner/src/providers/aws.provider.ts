@@ -8,8 +8,14 @@ import {
     GetBucketLoggingCommand,
     GetBucketVersioningCommand,
     GetPublicAccessBlockCommand,
-    GetBucketLocationCommand
+    GetBucketLocationCommand,
+    PutPublicAccessBlockCommand,
+    PutBucketEncryptionCommand,
+    PutBucketVersioningCommand,
+    PutBucketLoggingCommand,
+    DeleteBucketPolicyCommand,
 } from '@aws-sdk/client-s3';
+
 import { CloudProviderInterface } from '@storageguard/shared';
 import { CloudProvider, StorageResource } from '@storageguard/types';
 import { AssumeRoleCommand, STSClient } from '@aws-sdk/client-sts';
@@ -257,21 +263,139 @@ export class AwsProvider implements CloudProviderInterface {
     }
 
     // Remediation actions (Phase 2)
-    async removePublicAccess(resourceId: string, credentials: any): Promise<void> {
-        // Implementation for Phase 2
+    async removePublicAccess(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const client = await this.getClient(credentials);
+        const bucketName = resourceId;
+
+        // Capture current state for rollback
+        const currentPublicAccess = await this.getPublicAccessBlock(client, bucketName);
+        const currentPolicy = await this.getBucketPolicy(client, bucketName);
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: true,
+                currentState: { publicAccess: currentPublicAccess, policy: currentPolicy },
+                plannedAction: 'Block public access and remove public policy',
+            };
+        }
+
+        // Apply remediation: block public access
+        await client.send(
+            new PutPublicAccessBlockCommand({
+                Bucket: bucketName,
+                PublicAccessBlockConfiguration: {
+                    BlockPublicAcls: true,
+                    BlockPublicPolicy: true,
+                    IgnorePublicAcls: true,
+                    RestrictPublicBuckets: true,
+                },
+            })
+        );
+
+        // Remove bucket policy if it grants public access (optional)
+        if (currentPolicy) {
+            await client.send(new DeleteBucketPolicyCommand({ Bucket: bucketName }));
+        }
+
+        return {
+            success: true,
+            newState: { publicAccess: true, policy: null },
+            rollbackData: {
+                publicAccess: currentPublicAccess,
+                policy: currentPolicy,
+            },
+        };
     }
 
-    async enableEncryption(resourceId: string, credentials: any): Promise<void> {
-        // Implementation for Phase 2
+    async enableEncryption(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const client = await this.getClient(credentials);
+        const bucketName = resourceId;
+
+        const currentEncryption = await this.getBucketEncryption(client, bucketName);
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentEncryption,
+                currentState: { encryption: currentEncryption },
+                plannedAction: 'Enable default AES-256 encryption',
+            };
+        }
+
+        await client.send(
+            new PutBucketEncryptionCommand({
+                Bucket: bucketName,
+                ServerSideEncryptionConfiguration: {
+                    Rules: [
+                        {
+                            ApplyServerSideEncryptionByDefault: {
+                                SSEAlgorithm: 'AES256',
+                            },
+                        },
+                    ],
+                },
+            })
+        );
+
+        return {
+            success: true,
+            newState: { encryption: true },
+            rollbackData: { encryption: currentEncryption },
+        };
     }
 
-    async enableLogging(resourceId: string, credentials: any): Promise<void> {
-        // Implementation for Phase 2
+    async enableVersioning(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const client = await this.getClient(credentials);
+        const bucketName = resourceId;
+
+        const currentVersioning = await this.getBucketVersioning(client, bucketName);
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentVersioning,
+                currentState: { versioning: currentVersioning },
+                plannedAction: 'Enable versioning',
+            };
+        }
+
+        await client.send(
+            new PutBucketVersioningCommand({
+                Bucket: bucketName,
+                VersioningConfiguration: {
+                    Status: 'Enabled',
+                },
+            })
+        );
+
+        return {
+            success: true,
+            newState: { versioning: true },
+            rollbackData: { versioning: currentVersioning },
+        };
     }
 
-    async enableVersioning(resourceId: string, credentials: any): Promise<void> {
-        // Implementation for Phase 2
+    async enableLogging(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const client = await this.getClient(credentials);
+        const bucketName = resourceId;
+
+        const currentLogging = await this.getBucketLogging(client, bucketName);
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: true,
+                currentState: { logging: currentLogging },
+                plannedAction: 'Enable access logging – requires target bucket configuration',
+            };
+        }
+
+        return {
+            success: false,
+            message: 'Logging remediation requires a target logging bucket to be specified.',
+        };
     }
+
 
     async refreshResource(credentials: any, bucketName: string, region: string): Promise<StorageResource | null> {
         const client = await this.getClient(credentials, region);
