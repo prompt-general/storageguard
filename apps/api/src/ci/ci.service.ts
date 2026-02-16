@@ -26,6 +26,43 @@ export class CiService {
                 severity_counts: this.countSeverities(findings),
             },
             findings,
+            sarif: this.toSarif(findings),
+        };
+    }
+
+    private toSarif(findings: any[]) {
+        return {
+            $schema: 'https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json',
+            version: '2.1.0',
+            runs: [
+                {
+                    tool: {
+                        driver: {
+                            name: 'StorageGuard',
+                            version: '0.1.0',
+                            rules: [
+                                { id: 'SG-001', name: 'PublicAccess', shortDescription: { text: 'Public access enabled' } },
+                                { id: 'SG-002', name: 'Encryption', shortDescription: { text: 'Encryption disabled' } },
+                                { id: 'SG-003', name: 'Logging', shortDescription: { text: 'Logging disabled' } },
+                                { id: 'SG-004', name: 'Versioning', shortDescription: { text: 'Versioning disabled' } },
+                                { id: 'SG-005', name: 'PermissivePolicy', shortDescription: { text: 'Overly permissive policy' } },
+                            ],
+                        },
+                    },
+                    results: findings.map(f => ({
+                        ruleId: f.control_id,
+                        level: f.severity === 'high' || f.severity === 'critical' ? 'error' : 'warning',
+                        message: { text: f.message },
+                        locations: [
+                            {
+                                physicalLocation: {
+                                    artifactLocation: { uri: f.resource_id },
+                                },
+                            },
+                        ],
+                    })),
+                },
+            ],
         };
     }
 
