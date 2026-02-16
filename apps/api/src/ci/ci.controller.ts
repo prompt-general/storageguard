@@ -41,6 +41,11 @@ export class CiController {
         }
 
         const content = file.buffer.toString('utf-8');
-        return this.ciService.analyzeTemplate(content, file.originalname, provider);
+        const fileType = file.originalname.endsWith('.tf') ? 'tf' :
+            file.originalname.endsWith('.yaml') || file.originalname.endsWith('.yml') ? 'yaml' :
+                'json';
+
+        return this.analyzerService.analyze(content, fileType, provider);
     }
+
 }
