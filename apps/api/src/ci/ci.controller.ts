@@ -1,13 +1,14 @@
 import { Controller, Post, UseInterceptors, UploadedFile, Query, BadRequestException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiTags, ApiOperation, ApiConsumes, ApiBody } from '@nestjs/swagger';
-import { CiService } from './ci.service';
+import { TemplateAnalyzerService } from './analyzer.service';
 import { CloudProvider } from '@storageguard/types';
 
 @ApiTags('ci')
 @Controller('ci')
 export class CiController {
-    constructor(private ciService: CiService) { }
+    constructor(private analyzerService: TemplateAnalyzerService) { }
+
 
     @Post('analyze')
     @ApiOperation({ summary: 'Analyze IaC template for storage misconfigurations' })
