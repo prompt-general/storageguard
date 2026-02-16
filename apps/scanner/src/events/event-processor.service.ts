@@ -9,7 +9,7 @@ import { AzureProvider } from '../providers/azure.provider';
 import { GcpProvider } from '../providers/gcp.provider';
 
 
-import { FindingsService } from '../../../api/src/findings/findings.service'; // Ideally move to shared
+import { FindingsService } from '../../../api/src/control/findings/findings.service';
 import { ControlService } from '../../../api/src/control/control.service';
 import { RiskScoringEngine } from '@storageguard/shared';
 import { CloudTrailEvent, NormalizedEvent } from './event.types';
@@ -201,11 +201,17 @@ export class EventProcessorService {
             resource.configuration.policy,
             resource.configuration,
         );
+        const containsSensitiveData = resource.sensitivity?.has_sensitive_data || false;
+        const sensitiveDataTypes = resource.sensitivity?.sensitive_data_types || [];
+
         const riskScore = this.riskEngine.calculateRiskScore({
             baseSeverity,
             ...exposure,
             businessCriticality: businessContext.criticality || 1.0,
+            containsSensitiveData,
+            sensitiveDataTypes,
         });
+
 
 
         await this.findingsService.create({
