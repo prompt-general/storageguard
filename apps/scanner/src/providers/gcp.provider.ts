@@ -322,6 +322,49 @@ export class GcpProvider implements CloudProviderInterface {
             this.logger.error(`Error refreshing bucket ${bucketName}:`, error);
             return null;
         }
+    async listObjects(credentials: any, bucketName: string, region ?: string, limit: number = 100): Promise < any[] > {
+            const storage = this.getStorageClient(credentials);
+            const bucket = storage.bucket(bucketName);
+            const [files] = await bucket.getFiles({ maxResults: limit });
+            return files.map(file => ({
+                name: file.name,
+                size: Number(file.metadata.size),
+                lastModified: new Date(file.metadata.updated),
+                contentType: file.metadata.contentType,
+            }));
+        }
+
+    async getObjectMetadata(credentials: any, bucketName: string, objectKey: string): Promise < any > {
+            const storage = this.getStorageClient(credentials);
+            const file = storage.bucket(bucketName).file(objectKey);
+            try {
+                const [metadata] = await file.getMetadata();
+                return {
+                    contentType: metadata.contentType,
+                    contentLength: Number(metadata.size),
+                    metadata: metadata.metadata,
+                    lastModified: new Date(metadata.updated),
+                };
+            } catch(error) {
+                this.logger.error(`Error getting metadata for ${objectKey} in ${bucketName}:`, error);
+                return null;
+            }
+        }
+
+    async getObjectContent(credentials: any, bucketName: string, objectKey: string, region ?: string, maxBytes ?: number): Promise < Buffer > {
+            const storage = this.getStorageClient(credentials);
+            const file = storage.bucket(bucketName).file(objectKey);
+            try {
+                const [content] = await file.download({
+                    start: 0,
+                    end: maxBytes ? maxBytes - 1 : undefined,
+                });
+                return content;
+            } catch(error) {
+                this.logger.error(`Error getting content for ${objectKey} in ${bucketName}:`, error);
+                return Buffer.alloc(0);
+            }
+        }
     }
-}
+
 
