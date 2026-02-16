@@ -6,6 +6,7 @@ import { FindingsModule } from './control/findings/findings.module';
 import { AuthModule } from './auth/auth.module';
 import { EventsModule } from './events/events.module';
 import { NotificationModule } from './notification/notification.module';
+import { ResourcesModule } from './resources/resources.module';
 
 @Module({
     imports: [
@@ -16,6 +17,8 @@ import { NotificationModule } from './notification/notification.module';
         FindingsModule,
         EventsModule,
         NotificationModule,
+        ResourcesModule,
     ],
 })
+
 export class AppModule { }
