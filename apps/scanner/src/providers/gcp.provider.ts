@@ -178,21 +178,110 @@ export class GcpProvider implements CloudProviderInterface {
     }
 
     // Remediation actions (Phase 2)
-    async removePublicAccess(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async removePublicAccess(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const storage = this.getStorageClient(credentials);
+        const bucket = storage.bucket(resourceId);
+
+        const [policy] = await bucket.iam.getPolicy();
+        const originalPolicy = JSON.parse(JSON.stringify(policy));
+
+        // Remove all bindings with allUsers or allAuthenticatedUsers
+        const filteredBindings = policy.bindings?.filter(binding => {
+            return !binding.members?.includes('allUsers') && !binding.members?.includes('allAuthenticatedUsers');
+        }) || [];
+
+        if (dryRun) {
+            const wouldChange = JSON.stringify(policy.bindings) !== JSON.stringify(filteredBindings);
+            return {
+                dryRun: true,
+                wouldChange,
+                currentState: { policy: originalPolicy },
+                plannedAction: 'Remove public IAM bindings',
+            };
+        }
+
+        if (filteredBindings.length !== (policy.bindings?.length || 0)) {
+            policy.bindings = filteredBindings;
+            await bucket.iam.setPolicy(policy);
+        }
+
+        return {
+            success: true,
+            newState: { policy: filteredBindings },
+            rollbackData: { policy: originalPolicy },
+        };
     }
 
-    async enableEncryption(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableEncryption(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const storage = this.getStorageClient(credentials);
+        const bucket = storage.bucket(resourceId);
+
+        const [metadata] = await bucket.getMetadata();
+        const currentEncryption = metadata.encryption?.defaultKmsKeyName;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentEncryption,
+                currentState: { encryption: currentEncryption },
+                plannedAction: 'Enable default KMS encryption (using Cloud KMS) – requires specifying a KMS key',
+            };
+        }
+
+        // In production, you'd need a KMS key name. For simplicity, we'll skip.
+        return {
+            success: false,
+            message: 'Encryption remediation requires a KMS key to be specified.',
+        };
     }
 
-    async enableLogging(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableLogging(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const storage = this.getStorageClient(credentials);
+        const bucket = storage.bucket(resourceId);
+
+        const [metadata] = await bucket.getMetadata();
+        const currentLogging = metadata.logging?.logBucket;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentLogging,
+                currentState: { logging: currentLogging },
+                plannedAction: 'Enable access logging to a specified bucket',
+            };
+        }
+
+        // Requires a target bucket. We'll skip.
+        return {
+            success: false,
+            message: 'Logging remediation requires a target log bucket to be specified.',
+        };
     }
 
-    async enableVersioning(resourceId: string, credentials: any): Promise<void> {
-        // TODO
+    async enableVersioning(resourceId: string, credentials: any, dryRun: boolean = false): Promise<any> {
+        const storage = this.getStorageClient(credentials);
+        const bucket = storage.bucket(resourceId);
+
+        const [metadata] = await bucket.getMetadata();
+        const currentVersioning = metadata.versioning?.enabled || false;
+
+        if (dryRun) {
+            return {
+                dryRun: true,
+                wouldChange: !currentVersioning,
+                currentState: { versioning: currentVersioning },
+                plannedAction: 'Enable object versioning',
+            };
+        }
+
+        await bucket.setMetadata({ versioning: { enabled: true } });
+        return {
+            success: true,
+            newState: { versioning: true },
+            rollbackData: { versioning: currentVersioning },
+        };
     }
+
 
     async refreshResource(credentials: any, bucketName: string): Promise<StorageResource | null> {
         const storage = this.getStorageClient(credentials);
