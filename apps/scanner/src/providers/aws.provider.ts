@@ -438,56 +438,58 @@ export class AwsProvider implements CloudProviderInterface {
         }
     }
 
-    async listObjects(credentials: any, bucketName: string, region: string = 'us-east-1', limit: number = 100): Promise<any[]> {
+    async listObjects(credentials: any, bucket: string, region: string, limit: number = 100): Promise<any[]> {
         const client = await this.getClient(credentials, region);
-        const response = await client.send(new ListObjectsV2Command({
-            Bucket: bucketName,
+        const command = new ListObjectsV2Command({
+            Bucket: bucket,
             MaxKeys: limit,
-        }));
+        });
+        const response = await client.send(command);
         return (response.Contents || []).map(obj => ({
             key: obj.Key,
             size: obj.Size,
             lastModified: obj.LastModified,
+            eTag: obj.ETag,
         }));
     }
 
-    async getObjectMetadata(credentials: any, bucketName: string, objectKey: string, region: string = 'us-east-1'): Promise<any> {
+    async getObjectMetadata(credentials: any, bucket: string, key: string, region: string): Promise<any> {
         const client = await this.getClient(credentials, region);
         try {
-            const response = await client.send(new HeadObjectCommand({
-                Bucket: bucketName,
-                Key: objectKey,
-            }));
+            const command = new HeadObjectCommand({ Bucket: bucket, Key: key });
+            const response = await client.send(command);
             return {
                 contentType: response.ContentType,
                 contentLength: response.ContentLength,
+                lastModified: response.LastModified,
                 metadata: response.Metadata,
             };
         } catch (error) {
-            this.logger.error(`Error getting metadata for ${objectKey} in ${bucketName}:`, error);
+            this.logger.error(`Error getting metadata for ${key} in ${bucket}:`, error);
             return null;
         }
     }
 
-    async getObjectContent(credentials: any, bucketName: string, objectKey: string, region: string = 'us-east-1', maxBytes?: number): Promise<Buffer> {
+    async getObjectContent(credentials: any, bucket: string, key: string, region: string, maxBytes: number): Promise<Buffer> {
         const client = await this.getClient(credentials, region);
         try {
-            const response = await client.send(new GetObjectCommand({
-                Bucket: bucketName,
-                Key: objectKey,
-                Range: maxBytes ? `bytes=0-${maxBytes - 1}` : undefined,
-            }));
-
-            const chunks = [];
+            const command = new GetObjectCommand({
+                Bucket: bucket,
+                Key: key,
+                Range: `bytes=0-${maxBytes - 1}`,
+            });
+            const response = await client.send(command);
+            const chunks: Uint8Array[] = [];
             for await (const chunk of response.Body as any) {
                 chunks.push(chunk);
             }
             return Buffer.concat(chunks);
         } catch (error) {
-            this.logger.error(`Error getting content for ${objectKey} in ${bucketName}:`, error);
+            this.logger.error(`Error getting content for ${key} in ${bucket}:`, error);
             return Buffer.alloc(0);
         }
     }
 }
+
 
 

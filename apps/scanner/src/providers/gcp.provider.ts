@@ -324,52 +324,47 @@ export class GcpProvider implements CloudProviderInterface {
         }
     }
 
-    async listObjects(credentials: any, bucketName: string, region?: string, limit: number = 100): Promise<any[]> {
+    async listObjects(credentials: any, bucket: string, region: string, limit: number): Promise<any[]> {
         const storage = this.getStorageClient(credentials);
-        const bucket = storage.bucket(bucketName);
-        const [files] = await bucket.getFiles({ maxResults: limit });
+        const [files] = await storage.bucket(bucket).getFiles({ maxResults: limit });
         return files.map(file => ({
-            name: file.name,
-            size: Number(file.metadata.size),
-            lastModified: file.metadata.updated ? new Date(file.metadata.updated) : new Date(),
-            contentType: file.metadata.contentType,
-
+            key: file.name,
+            size: file.metadata.size,
+            lastModified: file.metadata.updated,
+            metadata: file.metadata,
         }));
     }
 
-    async getObjectMetadata(credentials: any, bucketName: string, objectKey: string): Promise<any> {
+    async getObjectMetadata(credentials: any, bucket: string, key: string, region: string): Promise<any> {
         const storage = this.getStorageClient(credentials);
-        const file = storage.bucket(bucketName).file(objectKey);
+        const file = storage.bucket(bucket).file(key);
         try {
             const [metadata] = await file.getMetadata();
             return {
                 contentType: metadata.contentType,
-                contentLength: Number(metadata.size),
+                contentLength: metadata.size,
+                lastModified: metadata.updated,
                 metadata: metadata.metadata,
-                lastModified: metadata.updated ? new Date(metadata.updated) : new Date(),
             };
-
         } catch (error) {
-            this.logger.error(`Error getting metadata for ${objectKey} in ${bucketName}:`, error);
+            this.logger.error(`Error getting metadata for ${key} in ${bucket}:`, error);
             return null;
         }
     }
 
-    async getObjectContent(credentials: any, bucketName: string, objectKey: string, region?: string, maxBytes?: number): Promise<Buffer> {
+    async getObjectContent(credentials: any, bucket: string, key: string, region: string, maxBytes: number): Promise<Buffer> {
         const storage = this.getStorageClient(credentials);
-        const file = storage.bucket(bucketName).file(objectKey);
+        const file = storage.bucket(bucket).file(key);
         try {
-            const [content] = await file.download({
-                start: 0,
-                end: maxBytes ? maxBytes - 1 : undefined,
-            });
-            return content;
+            const [buffer] = await file.download({ start: 0, end: maxBytes - 1 });
+            return buffer;
         } catch (error) {
-            this.logger.error(`Error getting content for ${objectKey} in ${bucketName}:`, error);
+            this.logger.error(`Error getting content for ${key} in ${bucket}:`, error);
             return Buffer.alloc(0);
         }
     }
 }
+
 
 
 
