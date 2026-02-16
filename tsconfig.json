@@ -18,9 +18,18 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@storageguard/shared": ["packages/shared/src"],
-      "@storageguard/database": ["packages/database/src"],
-      "@storageguard/types": ["packages/types/src"]
+      "@storageguard/shared": [
+        "packages/shared/src"
+      ],
+      "@storageguard/database": [
+        "packages/database/src"
+      ],
+      "@storageguard/types": [
+        "packages/types/src"
+      ],
+      "@storageguard/scanner": [
+        "apps/scanner/src"
+      ]
     }
   }
 }
