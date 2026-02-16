@@ -22,4 +22,10 @@ export interface CloudProviderInterface {
     enableEncryption(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
     enableLogging(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
     enableVersioning(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
+
+    // Data-level methods for sensitivity scanning
+    listObjects(credentials: any, resourceId: string, region?: string, limit?: number): Promise<any[]>;
+    getObjectMetadata(credentials: any, resourceId: string, objectKey: string, region?: string): Promise<any>;
+    getObjectContent(credentials: any, resourceId: string, objectKey: string, region?: string, maxBytes?: number): Promise<Buffer>;
 }
+
