@@ -1,0 +1,35 @@
+name: StorageGuard Scan
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  storageguard-scan:
+    name: Scan Infrastructure for Misconfigurations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Install StorageGuard CLI
+        run: npm install -g @storageguard/cli
+
+      - name: Scan Terraform Templates
+        run: storageguard-ci ./infrastructure/terraform/main.tf
+        env:
+          STORAGEGUARD_API_KEY: ${{ secrets.STORAGEGUARD_API_KEY }}
+          STORAGEGUARD_URL: "https://api.storageguard.io/v1"
+          CLOUD_PROVIDER: aws
+
+      - name: Upload Security Results (SARIF)
+        if: always()
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: results.sarif # Assumes CLI is configured to save SARIF output
