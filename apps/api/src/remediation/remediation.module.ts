@@ -6,15 +6,9 @@ import { RemediationController } from './remediation.controller';
 
 @Module({
     imports: [
-        TypeOrmModule.forFeature([
-            Finding,
-            RemediationAction,
-            StorageResource,
-            CloudAccount
-        ])
+        TypeOrmModule.forFeature([Finding, RemediationAction, StorageResource, CloudAccount]),
     ],
-    controllers: [RemediationController],
     providers: [RemediationService],
-    exports: [RemediationService],
+    controllers: [RemediationController],
 })
 export class RemediationModule { }
