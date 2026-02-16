@@ -33,7 +33,9 @@ import { ControlModule } from '../../../api/src/control/control.module';
         TypeOrmModule.forFeature([CloudAccount, StorageResource, Finding]),
         FindingsModule,
         ControlModule,
+        SensitivityModule,
     ],
+
     providers: [
         ScannerService,
         AwsProvider,
