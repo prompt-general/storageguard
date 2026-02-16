@@ -18,8 +18,8 @@ export interface CloudProviderInterface {
     processEvent(event: any): Promise<Partial<Finding>[]>;
 
     // Remediation actions
-    removePublicAccess(resourceId: string, credentials: any): Promise<void>;
-    enableEncryption(resourceId: string, credentials: any): Promise<void>;
-    enableLogging(resourceId: string, credentials: any): Promise<void>;
-    enableVersioning(resourceId: string, credentials: any): Promise<void>;
+    removePublicAccess(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
+    enableEncryption(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
+    enableLogging(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
+    enableVersioning(resourceId: string, credentials: any, dryRun?: boolean): Promise<any>;
 }
