@@ -8,6 +8,7 @@ import { EventsModule } from './events/events.module';
 import { NotificationModule } from './notification/notification.module';
 import { ResourcesModule } from './resources/resources.module';
 import { RemediationModule } from './remediation/remediation.module';
+import { ComplianceModule } from './compliance/compliance.module';
 
 @Module({
     imports: [
@@ -20,8 +21,10 @@ import { RemediationModule } from './remediation/remediation.module';
         NotificationModule,
         ResourcesModule,
         RemediationModule,
+        ComplianceModule,
     ],
 })
+
 
 
 export class AppModule { }
