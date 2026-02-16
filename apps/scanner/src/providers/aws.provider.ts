@@ -485,8 +485,9 @@ export class AwsProvider implements CloudProviderInterface {
             return Buffer.concat(chunks);
         } catch (error) {
             this.logger.error(`Error getting content for ${objectKey} in ${bucketName}:`, error);
-            return null;
+            return Buffer.alloc(0);
         }
     }
 }
+
 

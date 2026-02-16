@@ -331,8 +331,9 @@ export class GcpProvider implements CloudProviderInterface {
         return files.map(file => ({
             name: file.name,
             size: Number(file.metadata.size),
-            lastModified: new Date(file.metadata.updated),
+            lastModified: file.metadata.updated ? new Date(file.metadata.updated) : new Date(),
             contentType: file.metadata.contentType,
+
         }));
     }
 
@@ -345,8 +346,9 @@ export class GcpProvider implements CloudProviderInterface {
                 contentType: metadata.contentType,
                 contentLength: Number(metadata.size),
                 metadata: metadata.metadata,
-                lastModified: new Date(metadata.updated),
+                lastModified: metadata.updated ? new Date(metadata.updated) : new Date(),
             };
+
         } catch (error) {
             this.logger.error(`Error getting metadata for ${objectKey} in ${bucketName}:`, error);
             return null;
