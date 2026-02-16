@@ -1,0 +1,19 @@
+storageguard-scan:
+  stage: test
+  image: node:18-alpine
+  script:
+    - npm install -g @storageguard/cli
+    - storageguard-ci ./infrastructure/main.tf
+  variables:
+    STORAGEGUARD_API_KEY: $STORAGEGUARD_API_KEY
+    STORAGEGUARD_URL: "https://api.storageguard.io/v1"
+    CLOUD_PROVIDER: "aws"
+  only:
+    - merge_requests
+    - main
+  artifacts:
+    reports:
+      sast: gl-sast-report.json # Conversion to GitLab format would happen in CLI
+    paths:
+      - results.sarif
+    when: always
