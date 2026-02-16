@@ -9,6 +9,7 @@ import { NotificationModule } from './notification/notification.module';
 import { ResourcesModule } from './resources/resources.module';
 import { RemediationModule } from './remediation/remediation.module';
 import { ComplianceModule } from './compliance/compliance.module';
+import { SensitivityModule } from './sensitivity/sensitivity.module';
 
 @Module({
     imports: [
@@ -22,7 +23,9 @@ import { ComplianceModule } from './compliance/compliance.module';
         ResourcesModule,
         RemediationModule,
         ComplianceModule,
+        SensitivityModule,
     ],
+
 })
 
 
