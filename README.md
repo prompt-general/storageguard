@@ -79,7 +79,7 @@ graph TD
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/yourusername/storageguard.git
+    git clone https://github.com/MasterCaleb254/storageguard.git
     cd storageguard
     ```
 
